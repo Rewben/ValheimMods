@@ -32,7 +32,7 @@
                 WriteOnlyWhenDifferent="true"/>
 
         <ItemGroup>
-            <Compile Remove="$(MSBuildProjectDirectory)\Generated\BuildInfo.g.cs"/>
+            <Compile Remove="Generated\BuildInfo.g.cs;$(MSBuildProjectDirectory)\Generated\BuildInfo.g.cs"/>
             <Compile Include="$(MSBuildProjectDirectory)\Generated\BuildInfo.g.cs"/>
         </ItemGroup>
     </Target>

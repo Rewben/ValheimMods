@@ -8,6 +8,7 @@ Candidate: 5.1.101. Base: ValheimRAFT-v5.1.1. Reference game: local Valheim 1.0.
 - Production portal registry/policy/Harmony contract regression suite: 48 passed.
 - Deployment/configuration/backup/full chunked-world rollback and Gale metadata fixtures: 25 passed.
 - Game/reference DLLs excluded from Git and release DLL allowlist.
+- GitHub Actions: [48 C# and 25 Python checks passed](https://github.com/Rewben/ValheimMods/actions/runs/40265698433) on the first published implementation commit.
 
 These tests use game API doubles and filesystem fixtures. They do not execute
 Unity, connect real clients, or establish that the reported crash is resolved.

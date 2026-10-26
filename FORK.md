@@ -32,7 +32,8 @@ CI runs headless production-code contract tests with inspected game API doubles,
 Harmony instruction checks, and deployment/rollback fixture tests. These checks
 do not simulate Unity physics or establish multiplayer/gameplay acceptance.
 Release binaries are built locally with game references. Legacy upstream build
-workflows are not the fork's release process.
+workflows are archived under `.github/upstream-workflows/`; they are not active
+fork release workflows.
 
 ## Installation and configuration migration
 
