@@ -3,10 +3,10 @@
 ValheimRAFT with native ship-portal synchronization fixes and integrated
 RaftRebalance behavior. Based on upstream ValheimRAFT 5.1.1.
 
-**Thunderstore package and runtime fork: 5.1.104.** This release limits portal
-audits to ten preview records, puts the total and a six-character audit ID on a
-clear summary line, and keeps complete reports on the server. Update both the
-server and every client to 5.1.104 before connecting.
+**Thunderstore package and runtime fork: 5.1.105.** Audits identify saved portal
+copies at the same ship-relative position and print a short confirmed-cleanup
+command. Cleanup runs only on explicit admin request, in small networked batches.
+Update both the server and every client to 5.1.105 before connecting.
 
 ## Installation
 
@@ -44,6 +44,7 @@ Server-admin console commands:
 ```text
 vehicle portals audit [ship-id]
 vehicle portals repair <audit-id>
+vehicle portals repair <audit-id> --dedupe --confirm
 vehicle portals repair <audit-id> --remove <record-id>,<record-id> --confirm
 ```
 
@@ -56,17 +57,32 @@ The client prints only a small loaded-instance counter, not another full report.
 Periodic diagnostics also print counters without formatting all record details.
 
 Reports include saved records, live instances, positions, ship IDs and registry
-anomalies. Repair without explicit removal IDs
-does not delete distinct saved portal records. Position overlap alone is never
-treated as permission to delete a portal. Repairs provide no resource refunds.
+anomalies, plus `duplicateGroups` and `duplicateRecords`. The full file records
+every saved ID, its unrounded local position, and the ID selected to survive.
+
+**Audit is read-only.** To remove its detected extra saved records, run the printed
+`repair <id> --dedupe --confirm` command. It matches the same ship, portal prefab,
+coordinate frame and local 3D position within 1 mm. Missing/invalid local positions
+are skipped. It keeps one named portal where available, then chooses a stable ID.
+World-position rounding and ship-center coordinates are not used for selection.
+
+Cleanup yields between batches of at most 32 and waits for Valheim to acknowledge
+deletions. Keep the admin connected until `CLEANUP <id> COMPLETE` appears. A changed
+record, moved keeper, lost admin session or world change stops further work; run a
+fresh audit before continuing. No automatic position-based deletion runs during
+normal play. Basic repair without deletion flags still preserves saved records.
+Repairs provide no resource refunds. TargetPortal's temporary pins are cleared
+after repair; close and reopen the portal map to refresh it.
 
 ## Status and source
 
 Runtime 5.1.102 previously completed dedicated-server startup and configuration
-migration. Runtime 5.1.104 passes headless regression checks, including the
-16,248-record audit case. Dedicated-server startup and multiplayer stability
-validation for 5.1.104 remain pending. This update does not automatically remove
-existing distinct saved portal records or establish the cause of a disconnect.
+migration. Runtime 5.1.104 completed dedicated-server startup. Runtime 5.1.105
+passes headless regression checks, including a 16,248-record confirmed cleanup
+with asynchronous deletion acknowledgements. Dedicated-server startup and
+multiplayer validation of 5.1.105 remain pending. Tests use inspected game contracts
+and do not simulate Unity networking or establish that all reported disconnects
+are resolved.
 
 Source, maintenance, full snapshot rollback and upstream update instructions:
 [Rewben/ValheimMods](https://github.com/Rewben/ValheimMods/tree/rewben/main).

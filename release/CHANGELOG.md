@@ -1,5 +1,23 @@
 # Changelog
 
+## Package and runtime 5.1.105
+
+- Audit position-based saved-portal duplicates using ship, prefab, coordinate
+  frame and unrounded local 3D position with a 1 mm tolerance. Keep one portal
+  per group; missing or invalid local positions are excluded from cleanup.
+- Print duplicate counts and the exact short-ID `--dedupe --confirm` command.
+  Audit stays read-only; complete keep/remove selections remain in the report.
+- Delete only after explicit admin confirmation, in batches of at most 32 with
+  network deletion acknowledgements. Stop on changed records, keepers, sessions
+  or worlds. Append repair selections/results to the audit file without refunds.
+- Rebuild portal registries in one pass and detach deletion batches efficiently.
+  Replace the large repair-ID broadcast with a compact registry refresh signal.
+- Clear TargetPortal's temporary map pins and prune stale cached records after
+  repair. Unrelated saved map pins are unaffected.
+- Add production-code tests for large cleanup, position boundaries, invalid
+  coordinates, different ships/types, confirmation, cancellation and map refresh.
+- Server and clients must all update to runtime 5.1.105.
+
 ## Package and runtime 5.1.104
 
 - Limit the server audit preview to ten portal records and show the total count

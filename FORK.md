@@ -1,9 +1,17 @@
-# Rewben ValheimRAFT: package and runtime 5.1.104
+# Rewben ValheimRAFT: package and runtime 5.1.105
 
 Maintained at https://github.com/Rewben/ValheimMods on `rewben/main`, based on
 `ValheimRAFT-v5.1.1`. This fork integrates portal synchronization corrections and
 RaftRebalance behavior. It retains upstream plugin GUIDs, assembly names, prefab
 names, and saved-world keys. All clients and the server need the same fork version.
+
+5.1.105 adds manual position-based saved-record cleanup. Audit matches ship,
+prefab, coordinate frame and local 3D position within 1 mm, records the selected
+keepers/removals and prints a `--dedupe --confirm` command. Confirmed cleanup uses
+batches of at most 32 and waits for game deletion acknowledgements. Registry
+rebuilds are linear; TargetPortal temporary map pins are refreshed afterward.
+No automatic position-based deletion runs during play. Matching runtime 5.1.105
+is required on server and clients. Dedicated-server/gameplay validation is pending.
 
 5.1.104 caps audit previews at ten records and prints the total and a six-character
 case-insensitive audit ID at the beginning and end. The client prints only loaded
@@ -111,6 +119,7 @@ Admin F5 console commands:
 ```text
 vehicle portals audit [ship-id]
 vehicle portals repair <audit-id>
+vehicle portals repair <audit-id> --dedupe --confirm
 vehicle portals repair <audit-id> --remove <ZDO-id>,<ZDO-id> --confirm
 ```
 
@@ -118,10 +127,15 @@ Audits list record IDs, instance IDs/positions, ship IDs, and registry anomalies
 The console returns at most ten records, with the total and six-character audit ID
 at both ends. IDs accept either letter case. Complete server reports are saved under
 `BepInEx/config/PortalAudits/`. Audits belong to the requesting server admin and
-expire after five minutes or a world change. Repair without `--remove` corrects
+expire after five minutes or a world change. Repair without deletion flags corrects
 registrations and removes extra live instances sharing one record. It does not
-delete distinct saved records. Saved deletion requires explicit IDs from that
-fresh audit plus `--confirm`. All selections are validated before mutation.
+delete distinct saved records. Saved deletion requires explicit IDs or the audited
+position-duplicate selection via `--dedupe`, plus `--confirm`. Matching uses ship,
+prefab, coordinate frame and unrounded local coordinates within 1 mm; missing local
+positions are skipped. No background position deletion runs. The full audit maps
+each selected extra ID to the keeper. All selections are validated before mutation
+and again per batch; changed records or admin/world changes stop further batches.
+The job yields between batches of at most 32 and waits for network acknowledgement.
 Repair creates no resource refunds. Keep the canonical instance and its record.
 
 ## Main-server maintenance and full rollback

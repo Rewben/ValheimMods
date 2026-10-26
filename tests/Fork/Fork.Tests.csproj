@@ -18,5 +18,7 @@
     <Compile Include="../../src/ValheimVehicles/Fork/PortalPatches.cs" Link="Production/PortalPatches.cs" />
     <Compile Include="../../src/ValheimVehicles/Fork/PortalCommands.cs" Link="Production/PortalCommands.cs" />
     <Compile Include="../../src/ValheimVehicles/Fork/PortalAuditReport.cs" Link="Production/PortalAuditReport.cs" />
+    <Compile Include="../../src/ValheimVehicles/Fork/PortalDuplicatePlan.cs" Link="Production/PortalDuplicatePlan.cs" />
+    <Compile Include="../../src/ValheimVehicles/Fork/PortalMapRefresh.cs" Link="Production/PortalMapRefresh.cs" />
   </ItemGroup>
 </Project>

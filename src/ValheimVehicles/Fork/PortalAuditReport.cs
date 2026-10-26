@@ -19,11 +19,12 @@ public sealed class PortalAuditReport
 
   public string FullText => Summary + "\n" + string.Join("\n", Records);
 
-  public string Preview(string id)
+  public string Preview(string id, int duplicates = 0)
   {
     var count = Math.Min(PreviewLimit, Records.Count);
     return $"SERVER audit={id} | {Summary}\nShowing {count} of {Records.Count} portal records. Full report: PortalAudits/{id}.txt\n" +
       string.Join("\n", Records.Take(PreviewLimit)) +
+      (duplicates > 0 ? $"\nCLEANUP {duplicates} extra saved portals: vehicle portals repair {id} --dedupe --confirm" : "") +
       $"\nAUDIT ID: {id} | {Records.Count} total portals | expires in 5 minutes; current connection only.";
   }
 

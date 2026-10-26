@@ -13,6 +13,7 @@ public static class PortalRegistry
 {
   private static ZDOMan? world;
   private static readonly HashSet<ZDOID> seen = new();
+  private static readonly HashSet<ZDO> detachedForRepair = new();
   private static float nextDiagnostics;
   private static readonly Dictionary<ZDOID, ZoneSystem.SectorIndex> registeredSectors = new();
   public static int PreventedCreations { get; internal set; }
@@ -26,6 +27,7 @@ public static class PortalRegistry
   {
     world = null;
     registeredSectors.Clear();
+    detachedForRepair.Clear();
     PreventedCreations = CorrectedMemberships = 0;
     nextDiagnostics = 0;
     PortalCommands.Reset();
@@ -37,6 +39,7 @@ public static class PortalRegistry
     if (manager == null || ReferenceEquals(world, manager)) return;
     world = manager;
     registeredSectors.Clear();
+    detachedForRepair.Clear();
     // A bounded once-per-world pass also repairs sessions loaded with old registry corruption.
     foreach (var bucket in manager.m_objectsBySector)
       if (bucket != null) CorrectedMemberships += bucket.RemoveAll(z => IsPortal(z));
@@ -50,7 +53,16 @@ public static class PortalRegistry
       if (unique.Count == 0) manager.m_portalObjects.Remove(key);
       else manager.m_portalObjects[key] = unique;
     }
-    foreach (var zdo in manager.m_objectsByID.Values.Where(IsPortal).ToList()) Canonicalize(zdo);
+    // Rebuild in one pass. Calling Canonicalize for every record repeatedly scans
+    // every portal bucket, which is quadratic for the large stacks being repaired.
+    manager.m_portalObjects.Clear();
+    foreach (var zdo in manager.m_objectsByID.Values.Where(IsPortal))
+    {
+      var sector = zdo.GetSectorIndex();
+      if (!manager.m_portalObjects.TryGetValue(sector, out var bucket)) manager.m_portalObjects[sector] = bucket = new List<ZDO>();
+      bucket.Add(zdo);
+      registeredSectors[zdo.m_uid] = sector;
+    }
     manager.SetDirtyPortals();
   }
 
@@ -98,6 +110,7 @@ public static class PortalRegistry
   public static void BeforeReset(ZDO zdo)
   {
     if (zdo.SaveClone || world == null || !ReferenceEquals(world, ZDOMan.instance)) return;
+    if (detachedForRepair.Remove(zdo)) return;
     var id = zdo.m_uid;
     if (!IsPortal(zdo) && !registeredSectors.ContainsKey(id)) return;
     foreach (var key in world.m_portalObjects.Keys.ToList())
@@ -114,6 +127,23 @@ public static class PortalRegistry
   }
 
   public static void Normalize() { world = null; EnsureWorld(); }
+
+  public static void DetachRepairBatch(IEnumerable<ZDO> records)
+  {
+    var selected = new HashSet<ZDO>(records);
+    var manager = ZDOMan.instance;
+    foreach (var key in manager.m_portalObjects.Keys.ToList())
+    {
+      manager.m_portalObjects[key].RemoveAll(selected.Contains);
+      if (manager.m_portalObjects[key].Count == 0) manager.m_portalObjects.Remove(key);
+    }
+    // Normalize ran before this repair job and removed erroneous ordinary-sector
+    // membership. Check only affected sectors, not the entire world every batch.
+    foreach (var sector in selected.Select(z => z.GetSectorIndex().Sector).Distinct())
+      manager.m_objectsBySector[sector]?.RemoveAll(selected.Contains);
+    foreach (var record in selected) { registeredSectors.Remove(record.m_uid); detachedForRepair.Add(record); }
+    manager.SetDirtyPortals();
+  }
 
   public static void Track(VehiclePiecesController controller, ZNetView view)
   {

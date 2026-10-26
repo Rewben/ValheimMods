@@ -26,6 +26,7 @@ public sealed class PortalCommandTests
     Resources.Objects.Clear();
     VehiclePiecesController.ActiveInstances.Clear();
     Jotunn.Logger.Messages.Clear();
+    BepInEx.Bootstrap.Chainloader.PluginInfos.Clear();
     PortalRegistry.Reset();
     PortalCommands.Register();
   }

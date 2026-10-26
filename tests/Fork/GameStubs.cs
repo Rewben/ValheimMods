@@ -6,9 +6,10 @@ namespace UnityEngine
   public struct Vector3 { public float x,y,z; public Vector3(float x,float y=0,float z=0) { this.x=x;this.y=y;this.z=z; } }
   public struct Quaternion { }
   public static class Time { public static float realtimeSinceStartup; }
-  public sealed class GameObject { }
+  public sealed class GameObject { public bool Destroyed; }
+  public sealed class WaitForSeconds { public WaitForSeconds(float seconds) { } }
   public sealed class Transform { public Vector3 position; public void SetParent(object? parent, bool keepPosition) { } }
-  public static class Object { public static void Destroy(GameObject value) { } }
+  public static class Object { public static void Destroy(GameObject value) => value.Destroyed=true; }
   public static class Resources
   {
     public static readonly List<object> Objects = new();
@@ -18,6 +19,7 @@ namespace UnityEngine
 public readonly record struct ZDOID(long UserID, uint ID)
 {
   public static ZDOID None => default;
+  public override string ToString() => $"{UserID}:{ID}";
 }
 public static class ZoneSystem
 {
@@ -32,9 +34,13 @@ public sealed class ZDO
   public int TagReads;
   public int Prefab = "portal_wood".GetStableHashCode(), Parent = 7;
   public UnityEngine.Vector3 Position;
+  public UnityEngine.Vector3? Local;
+  public int Swivel;
   public bool IsValid() => Valid;
   public int GetPrefab() => Prefab;
   public int GetInt(int key) => Parent;
+  public int GetInt(string key) => Swivel;
+  public bool GetVec3(int key, out UnityEngine.Vector3 value) { value=Local.GetValueOrDefault(); return Local.HasValue; }
   public string GetString(int key) { TagReads++; return Tag; }
   public UnityEngine.Vector3 GetPosition() => Position;
   public void SetOwner(long owner) { }
@@ -51,7 +57,14 @@ public sealed class ZDOMan
   public readonly Dictionary<ZoneSystem.SectorIndex,List<ZDO>> m_portalObjects = new();
   public int Invalidations, DirtyCalls;
   public static long GetSessionID() => 17;
-  public void DestroyZDO(ZDO record) { m_objectsByID.Remove(record.m_uid); record.Valid=false; }
+  private readonly List<ZDOID> destroyed = new();
+  public void DestroyZDO(ZDO record) => destroyed.Add(record.m_uid);
+  public void FlushDestroyed()
+  {
+    foreach(var id in destroyed)
+      if(m_objectsByID.Remove(id,out var record)) { ValheimVehicles.Fork.PortalRegistry.BeforeReset(record); record.Valid=false; record.m_uid=ZDOID.None; }
+    destroyed.Clear();
+  }
   public ZDO? GetZDO(ZDOID id) => m_objectsByID.GetValueOrDefault(id);
   public List<ZDO> GetPortalList() => m_portalObjects.Values.SelectMany(x=>x).ToList();
   public Dictionary<ZoneSystem.SectorIndex,List<ZDO>> GetPortals() => m_portalObjects;
@@ -65,7 +78,8 @@ public sealed class ZNet
   public bool IsServer() => Server;
   public readonly List<string> m_adminList = new();
   public ZNetPeer Peer = new();
-  public ZNetPeer? GetPeer(long sender) => Peer;
+  public bool MissingPeer;
+  public ZNetPeer? GetPeer(long sender) => MissingPeer?null:Peer;
   public ZNetPeer GetServerPeer() => Peer;
 }
 public sealed class ZNetPeer { public long m_uid=99; public FakeSocket m_socket=new(); }
@@ -106,6 +120,18 @@ public sealed class Game
   public void ConnectPortals() { }
   public static Game instance = new();
   public readonly HashSet<int> PortalPrefabHash = new() { "portal_wood".GetStableHashCode(), "portal_stone".GetStableHashCode() };
+  public readonly List<IEnumerator> Coroutines = new();
+  public void StartCoroutine(IEnumerator routine) { if(routine.MoveNext()) Coroutines.Add(routine); }
+  public void AdvanceFrame()
+  {
+    ZDOMan.instance.FlushDestroyed();
+    foreach(var routine in Coroutines.ToArray()) if(!routine.MoveNext()) Coroutines.Remove(routine);
+  }
+  public void CompleteCoroutines()
+  {
+    for(var frame=0; Coroutines.Count>0 && frame<10000; frame++) AdvanceFrame();
+    if(Coroutines.Count>0) throw new InvalidOperationException("Coroutine did not complete");
+  }
 }
 public sealed class ZNetScene
 {
@@ -127,7 +153,7 @@ namespace ValheimVehicles.Controllers
     public void RemovePiece(ZNetView view) => m_portals.Remove(view);
   }
 }
-namespace ValheimVehicles.Shared.Constants { public static class VehicleZdoVars { public const int MBParentId=1; } }
+namespace ValheimVehicles.Shared.Constants { public static class VehicleZdoVars { public const int MBParentId=1, MBPositionHash=3; public const string SwivelParentId="SwivelParentId"; } }
 namespace ValheimVehicles.Fork
 {
   public static class RebalancePolicy { public static FakeEntry PortalDiagnostics=new(); }
@@ -140,6 +166,7 @@ namespace Jotunn
   {
     public static readonly List<string> Messages = new();
     public static void LogInfo(string message) => Messages.Add(message);
+    public static void LogWarning(string message) => Messages.Add(message);
   }
 }
 namespace BepInEx.Bootstrap
