@@ -18,6 +18,7 @@ public static class WorldSessionState
   /// </remarks>
   public static void ResetZdoScopedRegistries()
   {
+    Fork.PortalRegistry.Reset();
     VehiclePiecesController.m_allPieces.Clear();
     VehiclePiecesController.m_dynamicObjects.Clear();
     VehiclePiecesController.m_pendingPieces.Clear();

@@ -8,6 +8,7 @@
   using System.Linq;
   using System.Text.RegularExpressions;
   using HarmonyLib;
+  using ValheimVehicles.Fork;
   using Jotunn;
   using UnityEngine;
   using UnityEngine.Serialization;
@@ -612,7 +613,7 @@
         if (!RPCUtils.HasNearbyPlayersOrPeers([vehicleZdo], VehicleActiveAreaSyncRadius)) continue;
 
         var vehicleNetView = ZNetScene.instance.FindInstance(vehicleZdo);
-        if (!vehicleNetView) yield break;
+        if (!vehicleNetView) continue;
 
         yield return SyncAllPrefabsToVehiclePosition_Routine(vehicleNetView, kvp.Key, kvp.Value, stopWatchRuntime);
         yield return null;
@@ -621,11 +622,8 @@
       totalTime.Stop();
       LoggerProvider.LogDebugDebounced($"<sync_all_pieces_runtime> Total runtime for syncing all pieces: {totalTime.ElapsedMilliseconds}ms");
 
-      if (totalTime.ElapsedMilliseconds < 500)
-      {
-        yield return new WaitForSeconds(1000f - totalTime.ElapsedMilliseconds);
-      }
-
+      yield return new WaitForSeconds((float)ForkRules.RemainingSeconds(
+        VehicleGlobalConfig.ServerRaftUpdateZoneInterval.Value, totalTime.Elapsed.TotalSeconds));
       yield return null;
     }
 
@@ -1048,7 +1046,7 @@
             wheel.InitializeControls(netView, Manager);
             break;
           case TeleportWorld portal:
-            m_portals.Add(netView);
+            PortalRegistry.Track(this, netView);
             break;
           case RopeLadderComponent ladder:
             m_ladders.Add(ladder);
@@ -1843,6 +1841,19 @@
 
     public static void SetPrefabWorldPosition(ZDO? zdo, Vector3 vehiclePosition)
     {
+      if (PortalRegistry.IsPortal(zdo))
+      {
+        var view = ZNetScene.instance.FindInstance(zdo);
+        if (view != null) PortalRegistry.Update(zdo, view.transform.position, view.transform.rotation);
+        else
+        {
+          var parent = VehicleManager.GetVehicle(zdo.GetInt(VehicleZdoVars.MBParentId));
+          var pieces = parent != null ? parent.PiecesController : null;
+          if (pieces != null) PortalRegistry.Update(zdo, pieces.transform.TransformPoint(zdo.GetVec3(VehicleZdoVars.MBPositionHash, Vector3.zero)),
+            pieces.transform.rotation * Quaternion.Euler(zdo.GetVec3(VehicleZdoVars.MBRotationVecHash, Vector3.zero)));
+        }
+        return;
+      }
       if (zdo == null || !zdo.IsValid() || zdo.m_uid == ZDOID.None) return;
       if (CanUseActualPiecePosition)
       {
@@ -1949,7 +1960,7 @@
               var portalPos = nv.transform.position;
               MigratePortalSectorInZdoMan(zdo, portalPos);
               {
-                m_portals.Add(nv);
+                PortalRegistry.Track(this, nv);
               }
               continue;
             }
@@ -2027,77 +2038,20 @@
 
     public void SyncVehiclePortals(Vector3 vehiclePosition)
     {
-      if (m_portals == null || m_portals.Count == 0 || ZDOMan.instance == null) return;
-      var portalObjects = ZDOMan.instance.GetPortals();
-      if (portalObjects == null) return;
-
-      var rootZdo = m_nview != null && m_nview.IsValid() ? m_nview.GetZDO() : null;
-
-      for (var i = m_portals.Count - 1; i >= 0; i--)
+      if (ZDOMan.instance == null) return;
+      PortalRegistry.Prune(this);
+      foreach (var portal in m_portals)
       {
-        var portalNv = m_portals[i];
-        if (portalNv == null || !portalNv.IsValid()) continue;
-        var zdo = portalNv.GetZDO();
-        if (zdo == null || !zdo.IsValid()) continue;
-
-        var portalWorldPos = portalNv.transform.position;
-        var portalWorldRot = portalNv.transform.rotation;
-        var newSector = ZoneSystem.GetSectorIndex(portalWorldPos);
-
-        // Keep ZDO position and rotation fresh in ZDOMan for external mods (TargetPortal, map pins) and vanilla
-        zdo.SetPosition(portalWorldPos);
-        zdo.SetRotation(portalWorldRot);
-
-        // Ensure portal is correctly indexed in ZDOMan's portalObjects by current sector
-        if (!portalObjects.TryGetValue(newSector, out var currentSectorList) || !currentSectorList.Contains(zdo))
-        {
-          // Find and remove from any old/stale sector
-          foreach (var kvp in portalObjects)
-          {
-            if (kvp.Value.Contains(zdo))
-            {
-              kvp.Value.Remove(zdo);
-              if (kvp.Value.Count == 0)
-              {
-                portalObjects.Remove(kvp.Key);
-              }
-              break;
-            }
-          }
-
-          // Register under the new active sector
-          if (!portalObjects.TryGetValue(newSector, out var newList))
-          {
-            newList = new List<ZDO>();
-            portalObjects[newSector] = newList;
-          }
-          if (!newList.Contains(zdo))
-          {
-            newList.Add(zdo);
-          }
-          ZDOMan.instance.SetDirtyPortals();
-        }
-
-        MigratePortalSectorInZdoMan(zdo, portalWorldPos);
-
-        // Fast-pair matching tag if unconnected
+        var zdo = portal.GetZDO();
+        PortalRegistry.Update(zdo, portal.transform.position, portal.transform.rotation);
         EnforcePortalPairing(zdo);
-
-        // Actively push portal and vehicle root to all peers if server
-        if (ZNet.instance != null && ZNet.instance.IsServer())
-        {
-          ZDOMan.instance.ForceSendZDO(zdo.m_uid);
-          if (rootZdo != null)
-          {
-            ZDOMan.instance.ForceSendZDO(rootZdo.m_uid);
-          }
-        }
       }
     }
 
     public static void EnforcePortalPairing(ZDO zdo)
     {
       if (zdo == null || !zdo.IsValid() || ZDOMan.instance == null || Game.instance == null) return;
+      if (PortalRegistry.TargetPortalManages(zdo)) return;
       var myTag = zdo.GetString(ZDOVars.s_tag, string.Empty);
       if (string.IsNullOrEmpty(myTag)) return;
 
@@ -2132,39 +2086,7 @@
 
     public static void MigratePortalSectorInZdoMan(ZDO zdo, Vector3 targetPos)
     {
-      if (zdo == null || !zdo.IsValid() || ZDOMan.instance == null) return;
-      var oldSector = zdo.GetSectorIndex();
-      var newSector = ZoneSystem.GetSectorIndex(targetPos);
-      zdo.SetPosition(targetPos);
-      if (oldSector != newSector)
-      {
-        ZDOMan.instance.RemoveFromSector(zdo, oldSector);
-        ZDOMan.instance.AddToSector(zdo, newSector);
-
-        var isPortal = Game.instance != null && Game.instance.PortalPrefabHash.Contains(zdo.GetPrefab());
-        if (isPortal && ZDOMan.instance.m_portalObjects != null)
-        {
-          if (ZDOMan.instance.m_portalObjects.TryGetValue(oldSector, out var oldList))
-          {
-            oldList.Remove(zdo);
-          }
-          if (!ZDOMan.instance.m_portalObjects.TryGetValue(newSector, out var newList))
-          {
-            newList = new List<ZDO>();
-            ZDOMan.instance.m_portalObjects[newSector] = newList;
-          }
-          if (!newList.Contains(zdo))
-          {
-            newList.Add(zdo);
-          }
-          ZDOMan.instance.SetDirtyPortals();
-        }
-
-        if (ZNet.instance != null && ZNet.instance.IsServer())
-        {
-          ZDOMan.instance.ZDOSectorInvalidated(zdo);
-        }
-      }
+      PortalRegistry.Update(zdo, targetPos);
     }
 
     public void SyncAllTempPiecePositions(Vector3 vehiclePosition)
@@ -4830,6 +4752,7 @@
       OnboardCollider.size =
         onboardColliderSize;
       OnboardCollider.transform.localPosition = onboardColliderCenter;
+      RebalancePolicy.ClampFlotation(this);
       Physics.SyncTransforms();
     }
 

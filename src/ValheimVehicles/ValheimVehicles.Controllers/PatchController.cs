@@ -20,6 +20,8 @@ public static class PatchController
     _harmonyInstance = new Harmony(harmonyGuid);
 
     HarmonyHelper.TryPatchAll(_harmonyInstance,
+      typeof(Fork.PortalPatches),
+      typeof(Fork.RefundPatches),
       typeof(Character_Patch),
       typeof(CharacterAnimEvent_Patch),
       typeof(Plantable_Patch),
