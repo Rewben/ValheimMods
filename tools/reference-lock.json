@@ -1,0 +1,6 @@
+[
+  {"package":"ValheimModding/Jotunn/2.30.2", "file":"Jotunn.dll", "sha256":"9509221046842a70f94b98bab4cb41005dee026823a7a79345829ed46a30f796"},
+  {"package":"MathiasDecrock/PlanBuild/0.20.0", "file":"PlanBuild.dll", "sha256":"27e3d8f28393572bef8ee1ea311e77628a37b3f3aac802022cf413d329246de6"},
+  {"package":"Advize/PlantEasily/2.3.0", "file":"Advize_PlantEasily.dll", "sha256":"9d56dae0117798e504b0bae000e4c848aeaf8642648e19ce99e36d59fa173ecb"},
+  {"package":"ComfyMods/Gizmo/1.16.0", "file":"ComfyGizmo.dll", "sha256":"6de06ee0662d274c21d69d1b6fa0473fea9aaee718660e17e2c3c758d0b4b9bd"}
+]

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+    <PackageReference Include="Lib.Harmony" Version="2.2.2" />
+    <Compile Include="../../src/ValheimVehicles/Fork/ForkRules.cs" Link="Production/ForkRules.cs" />
+    <Compile Include="../../src/ValheimVehicles/Fork/RebalanceData.cs" Link="Production/RebalanceData.cs" />
+    <Compile Include="../../src/ValheimVehicles/Fork/PortalRegistry.cs" Link="Production/PortalRegistry.cs" />
+    <Compile Include="../../src/ValheimVehicles/Fork/ForkAccess.cs" Link="Production/ForkAccess.cs" />
+    <Compile Include="../../src/ValheimVehicles/Fork/PortalPatches.cs" Link="Production/PortalPatches.cs" />
+  </ItemGroup>
+</Project>

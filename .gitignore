@@ -387,6 +387,9 @@ Logs/
 src/ValheimRAFT.Unity/Assets/SUIMONO - WATER SYSTEM 2
 
 **/Generated/
+**/TestResults/
+**/__pycache__/
+tests/Fork/tmp*/
 
 # ModSync
 modSync.json5

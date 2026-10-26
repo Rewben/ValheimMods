@@ -1,0 +1,30 @@
+name: Rewben fork regression
+on:
+  push:
+    branches: [rewben/main, 'rewben/update-*']
+  pull_request:
+    branches: [rewben/main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  headless:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          sparse-checkout: |
+            tests/Fork
+            src/ValheimVehicles/Fork
+            tools
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet test tests/Fork/Fork.Tests.csproj -c Release --logger 'trx;LogFileName=regression.trx'
+      - run: python3 -m unittest discover -s tests/Fork -p 'test_*.py' -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-results
+          path: tests/Fork/TestResults/*.trx
