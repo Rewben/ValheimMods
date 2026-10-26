@@ -55,12 +55,15 @@ public class CustomTextureGroup
     var assetDirectory =
       Path.Combine(Paths.PluginPath, modFolderName, "Assets");
 
-    if (!Directory.Exists(assetDirectory))
+    if (!Directory.Exists(Path.Combine(assetDirectory, groupName)))
+    {
       /*
        * fallback so if user somehow breaks their install, the mod will warn them.
        */
       Logger.LogError(
         $"Invalid setup, Asset Directory missing within {assetDirectory}");
+      return Array.Empty<string>();
+    }
 
     var files =
       Directory.GetFiles(Path.Combine(assetDirectory, groupName));
@@ -93,9 +96,15 @@ public class CustomTextureGroup
     }
     else
     {
+      // Gale may choose a different folder name for the fork. Resolve bundled assets
+      // beside this assembly before trying historical Thunderstore folder names.
+      var installedFolder = Path.GetDirectoryName(typeof(CustomTextureGroup).Assembly.Location);
+      if (installedFolder != null && Directory.Exists(Path.Combine(installedFolder, "Assets", groupName)))
+        files = Directory.GetFiles(Path.Combine(installedFolder, "Assets", groupName));
       {
         foreach (var possibleModFolderName in ValheimRAFT_API.possibleModFolderNames)
         {
+          if (files.Length > 0) break;
           if (!Directory.Exists(Path.Combine(Paths.PluginPath,
                 possibleModFolderName))) continue;
 

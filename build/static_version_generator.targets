@@ -1,4 +1,5 @@
 <Project>
+    <PropertyGroup><ForkCommit Condition="'$(ForkCommit)' == ''">working-tree</ForkCommit></PropertyGroup>
     <Target Name="GenerateBuildInfo" BeforeTargets="BeforeCompile">
         <MakeDir Directories="$(MSBuildProjectDirectory)\Generated"/>
 
@@ -14,6 +15,8 @@
             <_BuildInfo Include="{"/>
             <_BuildInfo Include="    internal static class BuildInfo"/>
             <_BuildInfo Include="    {"/>
+            <_BuildInfo Include="        public const string ForkCommit = &quot;$(ForkCommit)&quot;%3B"/>
+            <_BuildInfo Include="        public const string UpstreamVersion = &quot;$(ForkUpstreamVersion)&quot;%3B"/>
             <_BuildInfo Include="        public const string Version         = &quot;$(Version)&quot;%3B"/>
             <_BuildInfo Include="        public const string AssemblyVersion = &quot;$(AssemblyVersion)&quot;%3B"/>
             <_BuildInfo Include="        public const string FileVersion     = &quot;$(FileVersion)&quot;%3B"/>
@@ -29,6 +32,7 @@
                 WriteOnlyWhenDifferent="true"/>
 
         <ItemGroup>
+            <Compile Remove="$(MSBuildProjectDirectory)\Generated\BuildInfo.g.cs"/>
             <Compile Include="$(MSBuildProjectDirectory)\Generated\BuildInfo.g.cs"/>
         </ItemGroup>
     </Target>
