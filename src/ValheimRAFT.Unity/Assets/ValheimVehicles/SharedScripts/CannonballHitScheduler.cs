@@ -169,6 +169,7 @@ namespace ValheimVehicles.SharedScripts
       var damageCollider = damageInfo.collider;
       if (damageCollider == null) return;
 #if VALHEIM
+      if (!global::ValheimVehicles.Fork.RebalancePolicy.CanCannonHit(damageCollider)) return;
       // hit is invalid.
       var isPlayerNull = Player.m_localPlayer == null;
       var hitZdoid = isPlayerNull ? ZDOID.None : Player.m_localPlayer!.GetZDOID();

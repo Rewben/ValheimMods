@@ -279,6 +279,7 @@ public class CannonPrefabConfig : BepInExBaseConfig<CannonPrefabConfig>
     {
       CannonPrefabs.Register();
       CannonPrefabs.OnEnabledChange();
+      Fork.RebalancePolicy.ApplyRecipes();
     };
   }
 }

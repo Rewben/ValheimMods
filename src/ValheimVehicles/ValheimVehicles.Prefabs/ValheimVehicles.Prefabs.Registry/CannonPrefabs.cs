@@ -658,13 +658,19 @@ public class CannonPrefabs : RegisterPrefab<CannonPrefabs>
       recipe.Recipe.m_enabled = isEnabled;
       LoggerProvider.LogMessage($"Updated recipe {recipeName} enabled: {isEnabled}");
     }
+      // Cannonball recipes have explicit Recipe_* names rather than the item
+      // prefab name. Match their output item after ObjectDB registration too.
+      if (ObjectDB.instance == null) return;
+      foreach (var registered in ObjectDB.instance.m_recipes)
+        if (registered != null && registered.m_item != null && registered.m_item.gameObject.name == recipeName)
+          registered.m_enabled = isEnabled;
   }
 
 
   public override void OnRegister()
   {
     // skip registry if prefab registry is disabled.
-    if (!CannonPrefabConfig.EnableCannons.Value) return;
+    // Register stable identities even when hidden, so server config sync can enable them.
 
     // persistent inventory items
     RegisterCannonballSolidItemPrefab();

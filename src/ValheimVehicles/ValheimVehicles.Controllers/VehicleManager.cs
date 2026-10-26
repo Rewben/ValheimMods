@@ -480,6 +480,7 @@
 
     public void OnVehicleConfigChange()
     {
+      Fork.RebalancePolicy.ClampFlotation(PiecesController);
       var shouldForceRebuild = false;
       if (LandMovementController != null)
       {

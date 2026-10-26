@@ -733,12 +733,7 @@
       });
     }
 
-    private static bool CanAddAdminCommand()
-    {
-      if (ZNet.instance == null) return false;
-      if (ZNet.instance.LocalPlayerIsAdminOrHost() || VehicleGuiMenuConfig.AllowDebugCommandsForNonAdmins.Value) return true;
-      return false;
-    }
+    private static bool CanAddAdminCommand() => Fork.ForkAccess.IsAdmin();
 
     private void CreateCommandsShortcutPanel()
     {

@@ -578,6 +578,7 @@ public class VehicleRamAoe : ValheimAoe, IDeferredTrigger
     }
 
     var character = collider.GetComponentInParent<Character>();
+    if (Fork.RebalancePolicy.EnforceRaftLocks.Value && character == null) return false;
     if (WaterZoneUtils.IsOnboard(character))
     {
       IgnoreCollider(collider);

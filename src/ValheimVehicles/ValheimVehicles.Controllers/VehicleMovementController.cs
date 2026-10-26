@@ -2988,11 +2988,17 @@
       shouldSkipSnappingLeash = false;
 #endif
 
-      // costs stamina of you move the vehicle beyond 1meter distance every FixedUpdate tick.
-      if (distanceMovedSinceHaulTick > 1 && HaulingPlayer.m_stamina > staminaHaulCost)
+      if (!shouldSkipSnappingLeash && distanceMovedSinceHaulTick > 0)
       {
-        HaulingPlayer.UseStamina(staminaHaulCost);
+        var cost = Fork.ForkRules.HaulCost(distanceMovedSinceHaulTick, staminaHaulCost);
         distanceMovedSinceHaulTick = 0f;
+        if (ShouldHaulingLineSnapOnZeroStamina && Fork.ForkRules.HaulExhausted(HaulingPlayer.m_stamina, cost))
+        {
+          HaulingPlayer.UseStamina(HaulingPlayer.m_stamina);
+          ForceStopHauling(true);
+          return;
+        }
+        HaulingPlayer.UseStamina(cost);
       }
 
       if (!shouldSkipSnappingLeash && HaulingPlayer.IsEncumbered())

@@ -165,6 +165,7 @@ public class RecoverRaftConsoleCommand : ConsoleCommand
   private static void RecoverShip(
     Dictionary<int, List<ZNetView>> unattachedVehicleNetViews)
   {
+    if (!Fork.ForkAccess.IsAdmin()) return;
     foreach (var id in unattachedVehicleNetViews.Keys)
     {
       var list = unattachedVehicleNetViews[id];

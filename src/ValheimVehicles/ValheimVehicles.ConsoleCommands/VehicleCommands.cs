@@ -41,6 +41,7 @@ public class VehicleCommands : ConsoleCommand
   {
     // public const string locate = "locate";
     // public const string rotate = "rotate";
+    public const string portals = "portals";
     public const string destroy = "destroy";
     public const string reportInfo = "report-info";
     public const string debug = "debug";
@@ -101,12 +102,12 @@ public class VehicleCommands : ConsoleCommand
       "Manually re-centers the vehicle's ZDO origin to the geometric hull center. This prevents piece ZDOs from drifting into foreign zone sectors."));
 #endif
 
+    commands.Add(new CommandInfo(VehicleCommandArgs.portals, "Admin portal audit and explicit repair", true));
     commands.AddRange(new[]
     {
       new CommandInfo(
         VehicleCommandArgs.debug,
-        "Will show a menu with options like rotating or debugging vehicle colliders",
-        true),
+        "Will show the ship commands menu; administrative actions remain admin-only"),
 
       new CommandInfo(
         VehicleCommandArgs.destroy,
@@ -115,7 +116,7 @@ public class VehicleCommands : ConsoleCommand
 
       new CommandInfo(
         VehicleCommandArgs.recover,
-        "Will recover any vehicles within range of 1000"),
+        "Will recover any vehicles within range of 1000", true),
 
       new CommandInfo(
         VehicleCommandArgs.rotate,
@@ -216,12 +217,15 @@ public class VehicleCommands : ConsoleCommand
       return;
     }
 
-    if (commandInfo.IsAdmin && !CanRunCheatCommand()) return;
+    if (commandInfo.IsAdmin && firstArg != VehicleCommandArgs.portals && !CanRunCheatCommand()) return;
 
     var nextArgs = args.Skip(1).ToArray();
 
     switch (firstArg)
     {
+      case VehicleCommandArgs.portals:
+        Fork.PortalCommands.Run(nextArgs);
+        break;
       case VehicleCommandArgs.move:
         VehicleMove(nextArgs);
         break;
@@ -802,44 +806,10 @@ public class VehicleCommands : ConsoleCommand
     return VectorUtils.ClampVector(position, -5000f, 5000f);
   }
 
-  public static bool CanRunCheatCommand()
-  {
-    try
-    {
-      if (!VehicleGuiMenuConfig.AllowDebugCommandsForNonAdmins.Value)
-      {
-        if (Player.m_localPlayer == null || ZNet.instance == false) return false;
-        var playerId = Player.m_localPlayer.GetPlayerID();
-        if (!ZNet.instance.IsAdmin(playerId))
-        {
-          Logger.LogMessage($"Player is not an admin. They cannot run this cheat command without setting configKeySection <{VehicleGuiMenuConfig.AllowDebugCommandsForNonAdmins.Definition.Section}> ConfigKey: <{VehicleGuiMenuConfig.AllowDebugCommandsForNonAdmins.Definition.Key}> to true in the raft config or being an Admin.");
-          return false;
-        }
-      }
+  public static bool CanRunCheatCommand() => Fork.ForkAccess.IsAdmin();
 
-      return true;
-    }
-    catch (Exception e)
-    {
-      return false;
-    }
-  }
-
-  public static bool CanRunEditCommand()
-  {
-    if (!VehicleGuiMenuConfig.AllowDebugCommandsForNonAdmins.Value)
-    {
-      if (Player.m_localPlayer == null || ZNet.instance == false) return false;
-      var playerId = Player.m_localPlayer.GetPlayerID();
-      if (!ZNet.instance.IsAdmin(playerId))
-      {
-        Logger.LogMessage($"Player is not an admin. They cannot run this edit command without setting configKeySection <{VehicleGuiMenuConfig.AllowEditCommandsForNonAdmins.Definition.Section}> ConfigKey: <{VehicleGuiMenuConfig.AllowEditCommandsForNonAdmins.Definition.Key}> to true in the raft config or being an Admin.");
-        return false;
-      }
-    }
-
-    return true;
-  }
+  public static bool CanRunEditCommand() => Fork.ForkAccess.IsAdmin() ||
+    (Player.m_localPlayer != null && VehicleGuiMenuConfig.AllowEditCommandsForNonAdmins.Value);
 
   /// <summary>
   /// Moves the vehicle based on the provided x, y, z parameters.
@@ -933,7 +903,7 @@ public class VehicleCommands : ConsoleCommand
 
   public static void ToggleVehicleCommandsHud()
   {
-    if (!CanRunCheatCommand()) return;
+    if (!CanRunEditCommand()) return;
     if (Player.m_localPlayer == null) return;
     // must do this otherwise the commands panel will not cycle debug value if we need to enable it.
     VehicleGui.ToggleCommandsPanelState(true);
@@ -1427,7 +1397,7 @@ public class VehicleCommands : ConsoleCommand
     if (vehicleInstance == null || vehicleInstance.MovementController == null) return Vector3.zero;
 
     var position = vehicleInstance.MovementController.m_body.position;
-    var creativeHeightOffset = VehicleGuiMenuConfig.VehicleCreativeHeight.Value;
+    var creativeHeightOffset = Fork.ForkRules.CreativeLift(VehicleGuiMenuConfig.VehicleCreativeHeight.Value, Fork.ForkAccess.IsAdmin());
 
     return new Vector3(position.x, position.y + creativeHeightOffset, position.z);
   }
@@ -1610,6 +1580,11 @@ public class VehicleCommands : ConsoleCommand
   /// </summary>
   public static void FixNearbyVehiclePositions(string[]? args)
   {
+    if (args != null && args.Length > 2 && !Fork.ForkAccess.IsAdmin())
+    {
+      Logger.LogMessage("Moving vehicle records requires admin access.");
+      return;
+    }
     if (Player.m_localPlayer == null)
     {
       Logger.LogMessage("No player found. Cannot determine nearby vehicles.");

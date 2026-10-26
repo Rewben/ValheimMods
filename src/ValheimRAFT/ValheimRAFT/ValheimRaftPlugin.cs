@@ -36,7 +36,7 @@ namespace ValheimRAFT;
 // ReSharper disable once RedundantNameQualifier
 [BepInDependency(Jotunn.Main.ModGuid)]
 [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod,
-  VersionStrictness.Minor)]
+  VersionStrictness.Patch)]
 public class ValheimRaftPlugin : BaseUnityPlugin
 {
   // ReSharper disable MemberCanBePrivate.Global
@@ -73,6 +73,7 @@ public class ValheimRaftPlugin : BaseUnityPlugin
   {
     DisplayName = ModName,
     CurrentVersion = GetPluginVersion(),
+    MinimumRequiredVersion = GetPluginVersion(),
     ModRequired = true,
     IsLocked = true
   };
@@ -119,6 +120,8 @@ public class ValheimRaftPlugin : BaseUnityPlugin
     // must be done before any other services that require LoggerProvider otherwise it will not work.
     ProviderInitializers.InitProviders(Logger, gameObject);
     ValheimVehicles.Compat.ValheimRAFT_API.RegisterHost(Instance);
+    ValheimVehicles.Fork.RebalancePolicy.Bind(Config);
+    Logger.LogInfo($"Rewben RAFT {Version}; upstream {BuildInfo.UpstreamVersion}; commit {BuildInfo.ForkCommit}; native rebalance and portal registry enabled");
     PrefabRegistryController.InitValheimVehiclesAssetBundle();
     ValheimVehiclesPlugin.CreateConfigFromValheimRAFTPluginConfig(ModConfigSync, Config);
 

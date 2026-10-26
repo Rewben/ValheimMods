@@ -195,6 +195,7 @@ public class ValheimVehiclesPlugin : MonoBehaviour
 
     LoggerProvider.LogInfo("Plugin ValheimVehicles started on server.");
 
+    Fork.RebalancePolicy.CompleteInitialization();
     HasCreatedConfig = true;
   }
 }
