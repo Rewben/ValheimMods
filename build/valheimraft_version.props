@@ -1,12 +1,12 @@
 <Project>
     <PropertyGroup Label="ValheimRAFT Version">
-        <Version>5.1.101</Version>
+        <Version>5.1.102</Version>
         <AssemblyVersion>$(Version).0</AssemblyVersion>
         <FileVersion>$(Version).0</FileVersion>
         <PackageVersion>$(Version)</PackageVersion>
         <ValheimRAFTVersion>$(Version)</ValheimRAFTVersion>
         <ForkUpstreamVersion>5.1.1</ForkUpstreamVersion>
-        <ForkRevision>1</ForkRevision>
+        <ForkRevision>2</ForkRevision>
         <ForkExpectedGameVersion>1.0.20</ForkExpectedGameVersion>
     </PropertyGroup>
 </Project>

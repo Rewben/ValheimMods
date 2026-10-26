@@ -1,9 +1,15 @@
-# Rewben ValheimRAFT 5.1.101
+# Rewben ValheimRAFT 5.1.102
 
 Maintained at https://github.com/Rewben/ValheimMods on `rewben/main`, based on
 `ValheimRAFT-v5.1.1`. This fork integrates portal synchronization corrections and
 RaftRebalance behavior. It retains upstream plugin GUIDs, assembly names, prefab
 names, and saved-world keys. All clients and the server need the same fork version.
+
+5.1.102 corrects the deployment health check that prematurely stopped the first
+5.1.101 maintenance attempt: the container's informational log-filter declaration
+was mistaken for a plugin failure. Full server/profile rollback was verified.
+The portal and rebalance implementation is unchanged; gameplay acceptance remains
+pending. Deployment evidence is now returned over the same SSH connection.
 
 ## Build and package (Windows PowerShell 7)
 
@@ -14,6 +20,7 @@ submodule, game launch, or plugin installation is needed.
 ```powershell
 git clone --filter=blob:none --branch rewben/main https://github.com/Rewben/ValheimMods.git
 Set-Location ValheimMods
+git remote add upstream https://github.com/zolantris/ValheimMods.git
 .\tools\Build-Fork.ps1 -ManagedPath 'E:\SteamLibrary\steamapps\common\Valheim\valheim_Data\Managed' -ProfileBepInEx 'C:\path\to\profile\BepInEx'
 .\tools\Package-Fork.ps1 -ManagedPath 'E:\SteamLibrary\steamapps\common\Valheim\valheim_Data\Managed' -ProfileBepInEx 'C:\path\to\profile\BepInEx' -Python 'C:\path\to\python.exe'
 ```
@@ -107,6 +114,10 @@ and `-ForkMetadataPath` pointing at the ZIP metadata. It uses one SSH password
 prompt, never captures a password, preserves existing server configuration, and
 mirrors both persistent and runtime plugin/patcher trees. The helper runs on the
 Linux host, not Windows Docker Desktop.
+Pass `-ResultPath 'C:\path\to\deployment-result.json'` to save startup logs,
+migration settings, backup checksum, and persistent/runtime DLL hashes locally
+over that same connection, on either startup success or failure. SSH password
+entry remains attached to its normal console and is not captured.
 
 Log everyone out before maintenance. Stop gracefully with the existing 120-second
 timeout. The tool backs up the entire stopped `/config`, including world chunk

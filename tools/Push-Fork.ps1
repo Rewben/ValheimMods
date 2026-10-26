@@ -12,6 +12,7 @@ param(
     [switch]$FullRollback,
     [string]$ForkMetadataPath,
     [switch]$PortalDiagnostics,
+    [string]$ResultPath,
     [switch]$Preview
 )
 $ErrorActionPreference = 'Stop'
@@ -25,13 +26,14 @@ function Invoke-Native([string]$Program, [string[]]$Arguments) {
     & $Program @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Program failed (exit $LASTEXITCODE)." }
 }
-function Invoke-BinaryTransfer([string]$Program, [string[]]$Arguments, [string]$InputFile) {
+function Invoke-BinaryTransfer([string]$Program, [string[]]$Arguments, [string]$InputFile, [string]$ReportPath) {
     # Raw bytes avoid PowerShell text-pipeline corruption of compressed archives.
     # stdout/stderr stay attached to the console, including SSH's password prompt.
     $startInfo = [Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = (Get-Command $Program -ErrorAction Stop).Source
     $startInfo.UseShellExecute = $false
     $startInfo.RedirectStandardInput = $true
+    $startInfo.RedirectStandardOutput = $true
     foreach ($argument in $Arguments) { $startInfo.ArgumentList.Add($argument) }
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $startInfo
@@ -43,6 +45,16 @@ function Invoke-BinaryTransfer([string]$Program, [string[]]$Arguments, [string]$
         $inputStream = [IO.File]::OpenRead($InputFile)
         $inputStream.CopyTo($process.StandardInput.BaseStream)
         $process.StandardInput.Close()
+        while ($null -ne ($line = $process.StandardOutput.ReadLine())) {
+            if ($line.StartsWith('REWBEN_DEPLOYMENT_JSON:')) {
+                if ($ReportPath) {
+                    $json = $line.Substring('REWBEN_DEPLOYMENT_JSON:'.Length)
+                    $null = $json | ConvertFrom-Json
+                    Set-Content -LiteralPath $ReportPath -Value $json -Encoding utf8NoBOM
+                    Write-Host "Saved deployment evidence: $ReportPath"
+                }
+            } else { Write-Host $line }
+        }
         $process.WaitForExit()
         if ($process.ExitCode -ne 0) { throw "$Program failed (exit $($process.ExitCode))." }
     } finally {
@@ -144,7 +156,7 @@ __DEPLOY__
 '@
     $remoteCommand = $remoteCommand.Replace('__REMOTE__', $remote).Replace('__DEPLOY__', $deployCommand).Replace("`r`n", "`n")
     Write-Host 'Connecting once. Enter your SSH password when prompted; upload and deployment follow automatically.'
-    Invoke-BinaryTransfer 'ssh' @('-T', '-o', 'NumberOfPasswordPrompts=1', $target, $remoteCommand) $transferArchive
+    Invoke-BinaryTransfer 'ssh' @('-T', '-o', 'NumberOfPasswordPrompts=1', $target, $remoteCommand) $transferArchive $ResultPath
 } finally {
     # The local target is generated under TEMP and checked before recursive deletion.
     $resolvedTemp = [IO.Path]::GetFullPath($temp)

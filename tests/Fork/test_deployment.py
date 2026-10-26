@@ -1,4 +1,5 @@
 import hashlib
+import contextlib
 import importlib.util
 import io
 import json
@@ -70,6 +71,42 @@ class DeploymentTests(unittest.TestCase):
             self.assertNotIn('fixture-sensitive-value', str(error))
         else:
             self.fail('Startup failure was not rejected')
+
+    def test_container_filter_notice_is_not_a_plugin_failure(self):
+        expected = {'version': '5.1.101', 'commit': 'abc123', 'gameVersion': '1.0.20'}
+        captured = (Path(__file__).parent / 'fixtures' / 'container-startup.log').read_text()
+        self.assertFalse(deployment.check_fork_health(captured, expected))
+        self.assertTrue(deployment.check_fork_health(captured + '\nGame server connected', expected))
+        with self.assertRaisesRegex(RuntimeError, 'MissingMethodException: Example.Missing'):
+            deployment.check_fork_health(captured + '\nMissingMethodException: Example.Missing', expected)
+
+    def test_real_failure_is_detected_before_fork_identity(self):
+        for message in ('Could not load Example.dll','NullReferenceException: fixture','[Error  : BepInEx] Plugin failed'):
+            with self.subTest(message=message), self.assertRaises(RuntimeError):
+                deployment.check_fork_health(message, {'version':'5.1.101','commit':'abc','gameVersion':'1.0.20'})
+
+    def test_deployment_report_contains_evidence_without_credentials(self):
+        root=self.base / 'server'
+        record=root / 'deployments' / ID
+        record.mkdir(parents=True)
+        (record / 'startup.log').write_text('Rewben RAFT 5.1.101\npassword=fixture-sensitive\n')
+        output=io.StringIO()
+        with contextlib.redirect_stdout(output):
+            deployment.emit_deployment_report(root, record, None, False, 'fixture failure')
+        encoded=output.getvalue().removeprefix('REWBEN_DEPLOYMENT_JSON:')
+        report=json.loads(encoded)
+        self.assertFalse(report['success'])
+        self.assertEqual(report['error'], 'fixture failure')
+        self.assertIn('Rewben RAFT', report['startup_log'])
+        self.assertNotIn('fixture-sensitive', encoded)
+
+    def test_health_requires_exact_fork_identity_and_a_game_version(self):
+        expected = {'version': '5.1.101', 'commit': 'abc123', 'gameVersion': '1.0.20'}
+        ready = 'Rewben RAFT 5.1.101; commit abc123\nRewben RAFT migration schema=1\nGame server connected'
+        self.assertFalse(deployment.check_fork_health(ready, expected))
+        self.assertFalse(deployment.check_fork_health('Valheim Version: l-1.0.20\n' + ready.replace('5.1.101','5.1.1010'), expected))
+        with self.assertRaisesRegex(RuntimeError, 'updated'):
+            deployment.check_fork_health('Valheim Version: l-1.0.21\n' + ready, expected)
 
     def test_full_rollback_restores_chunked_world_and_runtime_together(self):
         archive(self.bundle)

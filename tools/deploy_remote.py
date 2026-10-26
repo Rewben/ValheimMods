@@ -99,21 +99,23 @@ def check_fork_health(text, expected):
         return 'Game server connected' in text
     if '[Info   :RaftRebalance]' in text or re.search(r'Loading \[RaftRebalance ', text):
         raise RuntimeError('Companion loaded alongside the integrated fork.')
-    version = expected['version']
-    if 'Rewben RAFT ' + version not in text:
-        return False
-    if expected['commit'] not in text:
-        return False
-    failure = re.compile(r'(Could not load|Failed to load|Error loading|HarmonyException|MissingMethodException|TypeLoadException)', re.I)
-    failing_line = next((line.strip() for line in text.splitlines() if failure.search(line)), None)
+    failure = re.compile(r'(Could not load|Failed to load|Error loading|\b\w+Exception\b|\[Error\s*:)', re.I)
+    # The container's Go log filter prints its configured exclusion rules at INFO
+    # level. Quoted rule text is not an error emitted by Unity or a plugin.
+    filter_notice = re.compile(r"\bI\d{4}\s+\d{2}:\d{2}:\d{2}\.\d+\s+\d+\s+main\.go:\d+\]\s+Removing log lines starting with '[^']*'\s*$")
+    failing_line = next((line.strip() for line in text.splitlines() if failure.search(line) and not filter_notice.search(line)), None)
     if failing_line:
         if any(word in failing_line.lower() for word in ('password', 'token', 'secret')):
             failing_line = '[sensitive log line omitted; inspect startup.log]'
         raise RuntimeError('Plugin startup error: ' + failing_line[:600] + '; full details in startup.log.')
-    game = re.findall(r'Valheim version:\s*(?:l-)?([0-9.]+)', text)
+    version = re.escape(expected['version'])
+    identity = re.search(r'Rewben RAFT ' + version + r';[^\n]*commit ' + re.escape(expected['commit']) + r'(?:;|\s|$)', text)
+    if not identity:
+        return False
+    game = re.findall(r'Valheim version:\s*(?:l-)?([0-9.]+)', text, re.I)
     if game and game[-1] != expected['gameVersion']:
         raise RuntimeError(f'Game updated to {game[-1]}; recheck client/reference compatibility before gameplay.')
-    return 'Game server connected' in text and 'Rewben RAFT migration schema=1' in text
+    return bool(game) and 'Game server connected' in text and 'Rewben RAFT migration schema=1' in text
 
 def start_and_check(container, expected=None, record=None):
     since = str(int(time.time()))
@@ -230,6 +232,22 @@ def prepare_modtree(source, current, destination, mode):
     for folder in ('plugins', 'patchers'):
         shutil.copytree(source / folder, destination / folder)
 
+def emit_deployment_report(root, record, expected, success, error=None):
+    def redacted(text):
+        return '\n'.join(line for line in text.splitlines() if not any(word in line.lower() for word in ('password', 'token', 'secret')))
+    report = {'deployment':record.name, 'success':success, 'fork':expected, 'error':str(error) if error else None}
+    for name, path in (
+        ('startup_log', record / 'startup.log'),
+        ('backup_sha256', record / 'config-before.tar.gz.sha256'),
+        ('raft_config', root / 'config' / 'bepinex' / 'zolantris.ValheimRAFT.cfg')):
+        if path.is_file():
+            report[name] = redacted(path.read_text(errors='replace'))
+    for name, path in (
+        ('persistent_plugins', root / 'config' / 'bepinex' / 'plugins'),
+        ('runtime_plugins', root / 'data' / 'bepinex' / 'BepInEx' / 'plugins')):
+        report[name] = tree_inventory(path)
+    print('REWBEN_DEPLOYMENT_JSON:' + json.dumps(report), flush=True)
+
 def enable_fork_diagnostics(path):
     lines = path.read_text(encoding='utf-8-sig').splitlines(keepends=True) if path.exists() else []
     start = next((i for i, line in enumerate(lines) if line.strip() == '[Rebalance]'), None)
@@ -295,7 +313,12 @@ def deploy(root, container, deployment, archive):
             raise
         (record / 'installed').touch()
         print(f'Installed {manifest.get("label", deployment)}. Deployment ID: {deployment}', flush=True)
-        start_and_check(container, expected, record)
+        try:
+            start_and_check(container, expected, record)
+        except Exception as error:
+            emit_deployment_report(root, record, expected, False, error)
+            raise
+        emit_deployment_report(root, record, expected, True)
 
 def verify_backup(archive):
     # Read through EOF, including the gzip checksum, rather than only listing tar headers.
