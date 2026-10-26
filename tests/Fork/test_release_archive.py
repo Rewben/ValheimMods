@@ -89,6 +89,9 @@ class ReleaseArchiveTests(unittest.TestCase):
     def test_public_source_url_and_virtual_build_paths_are_allowed(self):
         self.assertEqual(release.privacy_findings(b'https://github.com/Rewben/ValheimMods\0/_/ValheimMods/src/file.cs'), [])
 
+    def test_compressed_binary_fragments_are_not_interpreted_as_file_paths(self):
+        self.assertEqual(release.privacy_findings(b'\xffT:/\x11\xff\x01\0Z:\\\x10\xf0'), [])
+
     def test_debug_redaction_changes_only_the_filename(self):
         path = self.base / 'ServerSync.dll'
         original = pe_fixture()

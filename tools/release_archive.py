@@ -12,7 +12,7 @@ RUNTIME_DLLS = ('ValheimRAFT.dll', 'ValheimVehicles.dll', 'ZdoWatcher.dll',
 PUBLIC_ROOT = {'manifest.json', 'README.md', 'CHANGELOG.md', 'icon.png', 'LICENSE',
                'ServerSync.LICENSE.txt', 'ServerSync.PROVENANCE.md', 'release-metadata.json'}
 PATTERNS = {
-    'absolute_windows_path': re.compile(r'(?i)(?<![a-z0-9])[a-z]:[\\/](?![\\/])'),
+    'absolute_windows_path': re.compile(r'(?i)(?<![a-z0-9])[a-z]:[\\/](?:(?:Users|Documents and Settings|AIDev)[\\/]|(?:[a-z0-9_. ()-]{1,100}[\\/])+[a-z0-9_. ()-]{1,100})'),
     'home_directory': re.compile(r'/(?:home|Users)/[^/\x00\s]+/|/root/'),
     'private_key': re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
     'credential': re.compile(r'ghp_[a-zA-Z0-9]{30,}|github_pat_[a-zA-Z0-9_]{30,}|AKIA[A-Z0-9]{16}'),
@@ -23,10 +23,10 @@ PATTERNS = {
 def privacy_findings(data, private_values=()):
     # .NET user strings can start at either byte alignment. Also scan PE/PNG/JSON
     # ASCII strings without loading assemblies or executing anything in the ZIP.
-    texts = [data.decode('utf-8', errors='ignore')]
+    texts = [data.decode('utf-8', errors='replace')]
     for offset in (0, 1):
         part = data[offset:]
-        texts.append(part[:len(part) // 2 * 2].decode('utf-16le', errors='ignore'))
+        texts.append(part[:len(part) // 2 * 2].decode('utf-16le', errors='replace'))
     findings = [name for name, pattern in PATTERNS.items() if any(pattern.search(text) for text in texts)]
     if any(value.casefold() in text.casefold() for value in private_values if len(value) >= 4 for text in texts):
         findings.append('configured_private_value')
