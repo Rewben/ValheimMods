@@ -1,7 +1,7 @@
 <Project>
-    <PropertyGroup Condition="!Exists('$(SolutionDir)build\.props')">
-        <BepInExPath>$(SolutionDir)libs</BepInExPath>
-        <ManagedDataPath>$(SolutionDir)libs</ManagedDataPath>
+    <PropertyGroup Condition="'$(ManagedDataPath)' == ''">
+        <BepInExPath>$(ReferenceRoot)</BepInExPath>
+        <ManagedDataPath>$(ReferenceRoot)</ManagedDataPath>
     </PropertyGroup>
     <ItemGroup Label="BepInEx">
         <Reference Include="0Harmony">

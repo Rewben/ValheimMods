@@ -1,7 +1,7 @@
 <Project>
-    <PropertyGroup Condition="!Exists('$(SolutionDir)build\.props')">
-        <BepInExPath>$(SolutionDir)libs</BepInExPath>
-        <ManagedDataPath>$(SolutionDir)libs</ManagedDataPath>
+    <PropertyGroup Condition="'$(ManagedDataPath)' == ''">
+        <BepInExPath>$(ReferenceRoot)</BepInExPath>
+        <ManagedDataPath>$(ReferenceRoot)</ManagedDataPath>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(IsDebug)' == 'true'">
@@ -113,7 +113,7 @@
     <ItemGroup Label="required-mods">
         <Reference Include="Jotunn">
             <SpecificVersion>False</SpecificVersion>
-            <HintPath>$(SolutionDir)libs\Jotunn.dll</HintPath>
+            <HintPath>$(ReferenceRoot)\Jotunn.dll</HintPath>
             <Private>False</Private>
         </Reference>
     </ItemGroup>
@@ -124,7 +124,7 @@
         <Publicize Include="PlanBuild"/>
         <Reference Include="PlanBuild">
             <SpecificVersion>False</SpecificVersion>
-            <HintPath>$(SolutionDir)libs\PlanBuild.dll</HintPath>
+            <HintPath>$(ReferenceRoot)\PlanBuild.dll</HintPath>
             <Private>False</Private>
         </Reference>
         <Publicize Include="Advize_PlantEasily"/>
@@ -132,13 +132,13 @@
         <DoNotPublicize Include="Advize_PlantEasily:ConfigurationManagerAttributes"/>
         <Reference Include="Advize_PlantEasily">
             <SpecificVersion>False</SpecificVersion>
-            <HintPath>$(SolutionDir)libs\Advize_PlantEasily.dll</HintPath>
+            <HintPath>$(ReferenceRoot)\Advize_PlantEasily.dll</HintPath>
             <Private>False</Private>
         </Reference>
         <Publicize Include="ComfyGizmo"/>
         <Reference Include="ComfyGizmo">
             <SpecificVersion>False</SpecificVersion>
-            <HintPath>$(SolutionDir)libs\ComfyGizmo.dll</HintPath>
+            <HintPath>$(ReferenceRoot)\ComfyGizmo.dll</HintPath>
             <Private>False</Private>
         </Reference>
     </ItemGroup>

@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
+    <ReferenceRoot>$(SolutionDir).references</ReferenceRoot>
+    <ManagedDataPath Condition="'$(ManagedDataPath)' == ''">E:\SteamLibrary\steamapps\common\Valheim\valheim_Data\Managed</ManagedDataPath>
+    <BepInExPath Condition="'$(BepInExPath)' == ''">C:\Users\dillo\AppData\Roaming\com.kesomannen.gale\valheim\profiles\VeryHard-Ripfaceoff\BepInEx\core</BepInExPath>
+  </PropertyGroup>
+</Project>

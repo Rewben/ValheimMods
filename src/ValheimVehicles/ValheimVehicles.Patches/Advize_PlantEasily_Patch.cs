@@ -11,9 +11,9 @@ public class Advize_PlantEasily_Patch
   [HarmonyPrefix]
   private static bool CheckPlacementStatus(
     Advize_PlantEasily.PlantEasily __instance,
-    object __result)
+    ref Player.PlacementStatus __result)
   {
-    __result = Advize_PlantEasily.PlantEasily.Status.Healthy;
+    __result = Player.PlacementStatus.Valid;
     return false;
   }
 }
