@@ -81,3 +81,22 @@ class GaleProfileTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'changed after backup'):
             gale.install(self.database, self.snapshot, self.base / 'unused.zip', metadata)
 
+    def test_install_replaces_existing_thunderstore_fork_without_changing_other_mods(self):
+        mods = [dict(fullName='rewbensandwich-ValheimRAFT_Rewben-5.1.103', backend='Thunderstore'),
+                dict(name='ValheimRAFT_Rewben', version='5.1.102'),
+                dict(fullName='Azumatt-AzuCraftyBoxes-1.8.28')]
+        with closing(sqlite3.connect(self.database)) as c, c:
+            c.execute('UPDATE profiles SET mods=? WHERE id=1', (json.dumps(mods),))
+        gale.backup(self.database, 'mine', self.snapshot)
+        package = self.base / 'release.zip'
+        package.write_bytes(b'fixture')
+        metadata = self.base / 'metadata.json'
+        metadata.write_text(json.dumps(dict(version='5.1.104')))
+        gale.install(self.database, self.snapshot, package, metadata)
+        with closing(sqlite3.connect(self.database)) as c:
+            installed = json.loads(c.execute('SELECT mods FROM profiles WHERE id=1').fetchone()[0])
+        self.assertEqual(installed[0], mods[2])
+        self.assertEqual(len(installed), 2)
+        self.assertEqual(installed[1]['name'], 'ValheimRAFT_Rewben')
+        self.assertEqual(installed[1]['version'], '5.1.104')
+

@@ -13,7 +13,7 @@ $archive = (Resolve-Path -LiteralPath $Package).Path
 $metadata = Get-Content -LiteralPath "$archive.metadata.json" -Raw | ConvertFrom-Json
 $expected = ((Get-Content -LiteralPath "$archive.sha256" -Raw).Trim() -split '\s+')[0]
 if ((Get-FileHash -LiteralPath $archive).Hash -ne $expected) { throw 'Release checksum mismatch' }
-$session = Join-Path $repo ('.references/maintenance-' + (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))
+$session = Join-Path $repo ('.references/maintenance-' + (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8))
 New-Item -ItemType Directory -Path $session | Out-Null
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 # ZIP reads file contents through Gale's links; the snapshot remains usable if the cache changes.
@@ -37,14 +37,31 @@ $old = @(Get-ChildItem -LiteralPath $plugins -Recurse -File -Filter ValheimRAFT.
 if ($old.Count -ne 1) { throw 'Expected one installed upstream RAFT plugin in the staged profile.' }
 $oldFolder = $old[0].Directory.FullName
 $newFolder = Join-Path $plugins 'ValheimRAFT_Rewben'
-[IO.Compression.ZipFile]::ExtractToDirectory($archive,$newFolder)
+$previousAssets = Join-Path $session 'previous-raft-assets'
 if (Test-Path -LiteralPath "$oldFolder/Assets") {
-  Get-ChildItem -LiteralPath "$oldFolder/Assets" -Force | Copy-Item -Destination "$newFolder/Assets" -Recurse -Force
+  Copy-Item -LiteralPath "$oldFolder/Assets" -Destination $previousAssets -Recurse
 }
-foreach ($path in @($oldFolder) + @(Get-ChildItem -LiteralPath $plugins -Recurse -File -Filter RaftRebalance.dll | ForEach-Object { $_.Directory.FullName } | Select-Object -Unique)) {
+$cleanup = @($oldFolder, $newFolder) + @(Get-ChildItem -LiteralPath $plugins -Recurse -File -Filter RaftRebalance.dll | ForEach-Object { $_.Directory.FullName })
+# Validate every staged target before removing any; never operate on the active profile.
+foreach ($path in $cleanup) {
   $resolved = [IO.Path]::GetFullPath($path)
-  if (-not $resolved.StartsWith($plugins + [IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or $resolved -eq $newFolder) { throw 'Unsafe staging cleanup target' }
-  Remove-Item -LiteralPath $resolved -Recurse -Force
+  if (-not $resolved.StartsWith($plugins + [IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe staging cleanup target' }
+}
+foreach ($path in $cleanup | Select-Object -Unique) {
+  if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
+}
+[IO.Compression.ZipFile]::ExtractToDirectory($archive,$newFolder)
+$newAssemblies = @(Get-ChildItem -LiteralPath $newFolder -Recurse -File -Filter ValheimRAFT.dll)
+if ($newAssemblies.Count -ne 1) { throw 'Expected exactly one RAFT assembly in the release.' }
+$newAssets = Join-Path $newAssemblies[0].Directory.FullName 'Assets'
+if (Test-Path -LiteralPath $previousAssets) {
+  foreach ($file in Get-ChildItem -LiteralPath $previousAssets -Recurse -File) {
+    $target = Join-Path $newAssets ([IO.Path]::GetRelativePath($previousAssets, $file.FullName))
+    if (-not (Test-Path -LiteralPath $target)) {
+      New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($target)) -Force | Out-Null
+      Copy-Item -LiteralPath $file.FullName -Destination $target
+    }
+  }
 }
 foreach ($property in $metadata.files.PSObject.Properties | Where-Object Name -Like '*.dll') {
   if ((Get-FileHash -LiteralPath (Join-Path $newFolder $property.Name)).Hash -ne $property.Value) { throw "Staged fork DLL mismatch: $($property.Name)" }

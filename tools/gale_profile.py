@@ -43,10 +43,10 @@ def install(database, snapshot, package, metadata):
             raise ValueError('Gale profile changed after backup; prepare a fresh session before installation')
         mods = json.loads(current['mods'])
         def replaced(mod):
-            return mod.get('fullName', '').startswith('zolantris-ValheimRAFT-') or mod.get('name') in ('RaftRebalance', 'ValheimRAFT_Rewben')
+            return mod.get('fullName', '').startswith(('zolantris-ValheimRAFT-', 'rewbensandwich-ValheimRAFT_Rewben-')) or mod.get('name') in ('RaftRebalance', 'ValheimRAFT_Rewben')
         kept = [mod for mod in mods if not replaced(mod)]
         if len(kept) == len(mods):
-            raise ValueError('No upstream RAFT profile entry found')
+            raise ValueError('No upstream or fork RAFT profile entry found')
         profile = Path(current['path'])
         kept.append(dict(enabled=True, installTime=datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
                          name='ValheimRAFT_Rewben', icon=str(profile / 'BepInEx/plugins/ValheimRAFT_Rewben/icon.png'),
