@@ -37,6 +37,6 @@ Push-Location $repo
 try {
   $commit = (& git rev-parse HEAD).Trim()
   if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve fork commit' }
-  & dotnet build src/ValheimRAFT/ValheimRAFT.csproj -c Release "-p:SolutionDir=$repo\" "-p:ManagedDataPath=$ManagedPath" "-p:BepInExPath=$ProfileBepInEx\core" "-p:ForkCommit=$commit" -v minimal -p:WarningLevel=0
+  & dotnet build src/ValheimRAFT/ValheimRAFT.csproj -c Release --no-incremental "-p:SolutionDir=$repo\" "-p:ManagedDataPath=$ManagedPath" "-p:BepInExPath=$ProfileBepInEx\core" "-p:ForkCommit=$commit" "-p:PathMap=$repo=/_/ValheimMods" -p:Deterministic=true -p:DebugType=None -p:DebugSymbols=false -v minimal -p:WarningLevel=0
   if ($LASTEXITCODE -ne 0) { throw 'RAFT source build failed' }
 } finally { Pop-Location }

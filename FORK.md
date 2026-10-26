@@ -1,9 +1,16 @@
-# Rewben ValheimRAFT 5.1.102
+# Rewben ValheimRAFT: package 5.1.103 / runtime 5.1.102
 
 Maintained at https://github.com/Rewben/ValheimMods on `rewben/main`, based on
 `ValheimRAFT-v5.1.1`. This fork integrates portal synchronization corrections and
 RaftRebalance behavior. It retains upstream plugin GUIDs, assembly names, prefab
 names, and saved-world keys. All clients and the server need the same fork version.
+
+Package 5.1.103 is a packaging/privacy correction. It keeps runtime version 5.1.102,
+places assemblies and Assets under an explicit plugins directory for Gale/r2modman,
+and uses virtual compiler source paths without debug symbols. The staged unsigned
+ServerSync dependency has only its CodeView PDB filename sanitized. No changes to
+portal/balance behavior or network compatibility are included. The public ZIP uses
+the user-facing files in `release/`; this developer guide is not bundled.
 
 5.1.102 corrects the deployment health check that prematurely stopped the first
 5.1.101 maintenance attempt: the container's informational log-filter declaration
@@ -32,7 +39,11 @@ otherwise the build downloads the pinned public package. Game/reference DLLs are
 never added to Git or the ZIP. `Package-Fork.ps1` requires committed source, runs
 the headless regression suite, builds, and writes the ZIP, SHA256, and metadata
 under `dist/`. Startup logs and metadata identify the source commit and upstream
-base. The ZIP DLL allowlist contains only RAFT's six runtime assemblies.
+base. The ZIP DLL allowlist contains only RAFT's six runtime assemblies under
+`plugins/`. Packaging validates the Assets hierarchy, CRCs, metadata hashes, and
+private-path/credential patterns. Optional `-PrivacyValuesFile` supplies a local
+JSON array of additional private strings to reject; it is never bundled. The
+archive audit report and checksum stay beside the finished ZIP.
 
 Python 3 is needed for the deployment fixture checks during packaging.
 CI runs headless production-code contract tests with inspected game API doubles,

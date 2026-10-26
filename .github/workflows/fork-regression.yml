@@ -18,6 +18,7 @@ jobs:
             tests/Fork
             src/ValheimVehicles/Fork
             tools
+            release
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x

@@ -3,7 +3,7 @@
         <Version>5.1.102</Version>
         <AssemblyVersion>$(Version).0</AssemblyVersion>
         <FileVersion>$(Version).0</FileVersion>
-        <PackageVersion>$(Version)</PackageVersion>
+        <PackageVersion>5.1.103</PackageVersion>
         <ValheimRAFTVersion>$(Version)</ValheimRAFTVersion>
         <ForkUpstreamVersion>5.1.1</ForkUpstreamVersion>
         <ForkRevision>2</ForkRevision>
