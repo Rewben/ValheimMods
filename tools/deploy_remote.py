@@ -104,8 +104,12 @@ def check_fork_health(text, expected):
         return False
     if expected['commit'] not in text:
         return False
-    if re.search(r'(Could not load|Failed to load|Error loading|HarmonyException|MissingMethodException|TypeLoadException)', text, re.I):
-        raise RuntimeError('Plugin startup error; inspect startup.log before gameplay.')
+    failure = re.compile(r'(Could not load|Failed to load|Error loading|HarmonyException|MissingMethodException|TypeLoadException)', re.I)
+    failing_line = next((line.strip() for line in text.splitlines() if failure.search(line)), None)
+    if failing_line:
+        if any(word in failing_line.lower() for word in ('password', 'token', 'secret')):
+            failing_line = '[sensitive log line omitted; inspect startup.log]'
+        raise RuntimeError('Plugin startup error: ' + failing_line[:600] + '; full details in startup.log.')
     game = re.findall(r'Valheim version:\s*(?:l-)?([0-9.]+)', text)
     if game and game[-1] != expected['gameVersion']:
         raise RuntimeError(f'Game updated to {game[-1]}; recheck client/reference compatibility before gameplay.')

@@ -13,7 +13,20 @@ Candidate: 5.1.101. Base: ValheimRAFT-v5.1.1. Reference game: local Valheim 1.0.
 These tests use game API doubles and filesystem fixtures. They do not execute
 Unity, connect real clients, or establish that the reported crash is resolved.
 
-## Main-server acceptance (not yet performed)
+## Main-server attempt: October 25, 2026
+
+The 5.1.101 candidate was installed during the authorized maintenance session.
+The stopped-server backup and persistent/runtime mod swap completed. Startup
+failed the deployment health check; the helper stopped the server and the client
+wrapper restored the previous Gale profile and metadata. The actual error is
+being collected before full server snapshot recovery. The public candidate is
+marked withdrawn. Main-server acceptance has not passed.
+
+The first failure message omitted the matched log line. The deployment helper now
+includes that line (with sensitive-value suppression) so a future startup failure
+is actionable directly from the command output.
+
+## Outstanding main-server acceptance
 
 - Maintenance logout and stopped-server/profile backups: pending.
 - Installation, migration, plugin health and matching clients: pending.

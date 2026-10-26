@@ -59,6 +59,18 @@ class DeploymentTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'updated'):
             deployment.check_fork_health(good.replace('1.0.20','1.0.21'), expected)
 
+    def test_startup_failure_reports_the_actual_error_without_sensitive_values(self):
+        expected = {'version': '5.1.101', 'commit': 'abc123', 'gameVersion': '1.0.20'}
+        identity = 'Rewben RAFT 5.1.101; commit abc123\n'
+        with self.assertRaisesRegex(RuntimeError, 'MissingMethodException: Example.Missing'):
+            deployment.check_fork_health(identity + 'MissingMethodException: Example.Missing', expected)
+        try:
+            deployment.check_fork_health(identity + 'Could not load password=fixture-sensitive-value', expected)
+        except RuntimeError as error:
+            self.assertNotIn('fixture-sensitive-value', str(error))
+        else:
+            self.fail('Startup failure was not rejected')
+
     def test_full_rollback_restores_chunked_world_and_runtime_together(self):
         archive(self.bundle)
         root = self.base / 'server'
