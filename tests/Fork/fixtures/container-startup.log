@@ -1,0 +1,5 @@
+Oct 25 22:17:16 supervisord: valheim-server I1025 22:17:16.295996     162 main.go:96] Removing log lines starting with 'Fallback handler could not load library'
+Oct 25 22:17:19 supervisord: valheim-server [Message:   BepInEx] Valheim Version: l-1.0.20
+Oct 25 22:18:54 supervisord: valheim-server [Info   :   BepInEx] Loading [ValheimRAFT 5.1.101] (zolantris.ValheimRAFT)
+Oct 25 22:18:55 supervisord: valheim-server [Info   :ValheimVehicles.Fork.RebalancePolicy] Rewben RAFT migration schema=1; legacy=True; companion absent; integrated settings bound
+Oct 25 22:18:55 supervisord: valheim-server [Info   :ValheimRAFT] Rewben RAFT 5.1.101; upstream 5.1.1; commit abc123; native rebalance and portal registry enabled
