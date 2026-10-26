@@ -1,4 +1,4 @@
-// Test doubles implement only the inspected game contracts used by production PortalRegistry.
+// Test doubles implement only the inspected game contracts used by the production portal code.
 // No Unity/game assemblies or replacement implementation of the registry are used by these tests.
 using System.Collections;
 namespace UnityEngine
@@ -7,6 +7,13 @@ namespace UnityEngine
   public struct Quaternion { }
   public static class Time { public static float realtimeSinceStartup; }
   public sealed class GameObject { }
+  public sealed class Transform { public Vector3 position; public void SetParent(object? parent, bool keepPosition) { } }
+  public static class Object { public static void Destroy(GameObject value) { } }
+  public static class Resources
+  {
+    public static readonly List<object> Objects = new();
+    public static T[] FindObjectsOfTypeAll<T>() => Objects.OfType<T>().ToArray();
+  }
 }
 public readonly record struct ZDOID(long UserID, uint ID)
 {
@@ -21,11 +28,16 @@ public sealed class ZDO
 {
   public ZDOID m_uid;
   public bool Valid = true, SaveClone;
+  public string Tag = "Test portal";
+  public int TagReads;
   public int Prefab = "portal_wood".GetStableHashCode(), Parent = 7;
   public UnityEngine.Vector3 Position;
   public bool IsValid() => Valid;
   public int GetPrefab() => Prefab;
   public int GetInt(int key) => Parent;
+  public string GetString(int key) { TagReads++; return Tag; }
+  public UnityEngine.Vector3 GetPosition() => Position;
+  public void SetOwner(long owner) { }
   public ZoneSystem.SectorIndex GetSectorIndex() => ZoneSystem.GetSectorIndex(Position);
   public void SetPosition(UnityEngine.Vector3 value) => Position=value;
   public void SetRotation(UnityEngine.Quaternion rotation) { }
@@ -38,6 +50,8 @@ public sealed class ZDOMan
   public readonly List<ZDO>?[] m_objectsBySector = new List<ZDO>?[16];
   public readonly Dictionary<ZoneSystem.SectorIndex,List<ZDO>> m_portalObjects = new();
   public int Invalidations, DirtyCalls;
+  public static long GetSessionID() => 17;
+  public void DestroyZDO(ZDO record) { m_objectsByID.Remove(record.m_uid); record.Valid=false; }
   public ZDO? GetZDO(ZDOID id) => m_objectsByID.GetValueOrDefault(id);
   public List<ZDO> GetPortalList() => m_portalObjects.Values.SelectMany(x=>x).ToList();
   public Dictionary<ZoneSystem.SectorIndex,List<ZDO>> GetPortals() => m_portalObjects;
@@ -49,13 +63,42 @@ public sealed class ZNet
   public static ZNet? instance;
   public bool Server, LocalAdmin;
   public bool IsServer() => Server;
+  public readonly List<string> m_adminList = new();
+  public ZNetPeer Peer = new();
+  public ZNetPeer? GetPeer(long sender) => Peer;
+  public ZNetPeer GetServerPeer() => Peer;
+}
+public sealed class ZNetPeer { public long m_uid=99; public FakeSocket m_socket=new(); }
+public sealed class FakeSocket { public string Host="Steam_123"; public string GetHostName() => Host; }
+public sealed class ZRoutedRpc
+{
+  public static ZRoutedRpc instance = new();
+  public const long Everybody = 0;
+  public readonly Dictionary<string,Delegate> Handlers = new();
+  public readonly List<(long Peer,string Name,string Value)> Sent = new();
+  public void Register<T>(string name, Action<long,T> callback) => Handlers[name]=callback;
+  public void InvokeRoutedRPC(long peer,string name,string value) => Sent.Add((peer,name,value));
+}
+public static class ZDOVars { public const int s_tag=2; }
+public sealed class TeleportWorld { public ZNetView m_nview=null!; }
+public sealed class Player { public static Player? m_localPlayer; }
+public sealed class Console
+{
+  public static Console? instance = new();
+  public readonly List<string> Messages = new();
+  public void Print(string message) => Messages.Add(message);
 }
 public sealed class ZNetView
 {
   public UnityEngine.GameObject gameObject = new();
   public ZDO Record = null!;
+  public ZDO? m_zdo { get=>Record; set=>Record=value!; }
+  public UnityEngine.Transform transform = new();
+  public object? Parent;
   public ZDO GetZDO() => Record;
   public bool IsValid() => Record != null && Record.Valid;
+  public int GetInstanceID() => GetHashCode();
+  public T? GetComponentInParent<T>() where T:class => Parent as T;
 }
 public sealed class Game
 {
@@ -77,14 +120,27 @@ public static class HashExtensions
 }
 namespace ValheimVehicles.Controllers
 {
-  public sealed class VehiclePiecesController { public readonly List<ZNetView> m_portals = new(); }
+  public sealed class VehiclePiecesController
+  {
+    public static readonly Dictionary<int,VehiclePiecesController> ActiveInstances = new();
+    public readonly List<ZNetView> m_portals = new();
+    public void RemovePiece(ZNetView view) => m_portals.Remove(view);
+  }
 }
 namespace ValheimVehicles.Shared.Constants { public static class VehicleZdoVars { public const int MBParentId=1; } }
 namespace ValheimVehicles.Fork
 {
-  public static class PortalCommands { public static void Reset() { } public static void Register() { } public static void LogCounters() { } }
   public static class RebalancePolicy { public static FakeEntry PortalDiagnostics=new(); }
   public sealed class FakeEntry { public bool Value; }
+}
+namespace BepInEx { public static class Paths { public static string ConfigPath = ""; } }
+namespace Jotunn
+{
+  public static class Logger
+  {
+    public static readonly List<string> Messages = new();
+    public static void LogInfo(string message) => Messages.Add(message);
+  }
 }
 namespace BepInEx.Bootstrap
 {

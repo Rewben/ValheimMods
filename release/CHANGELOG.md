@@ -1,5 +1,20 @@
 # Changelog
 
+## Package and runtime 5.1.104
+
+- Limit the server audit preview to ten portal records and show the total count
+  and audit ID prominently at both the start and end of the response.
+- Replace the client's unbounded full-record dump with a small loaded-instance
+  counter. Preserve complete server reports in `PortalAudits/<id>.txt`.
+- Use six-character, case-insensitive audit IDs with collision checks against
+  active audits and saved report filenames. Keep admin/session ownership and
+  five-minute expiry checks.
+- Periodic portal diagnostics no longer format a full per-record report only to
+  discard it and print the first line.
+- Add regression coverage using the production audit commands with 16,248 saved
+  records. Existing saved portals and deletion rules remain unchanged.
+- Server and clients must all update to runtime 5.1.104.
+
 ## Package 5.1.103 / runtime 5.1.102
 
 - Put runtime DLLs and their Assets hierarchy under an explicit `plugins/` folder

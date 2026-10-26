@@ -1,11 +1,17 @@
-# Rewben ValheimRAFT: package 5.1.103 / runtime 5.1.102
+# Rewben ValheimRAFT: package and runtime 5.1.104
 
 Maintained at https://github.com/Rewben/ValheimMods on `rewben/main`, based on
 `ValheimRAFT-v5.1.1`. This fork integrates portal synchronization corrections and
 RaftRebalance behavior. It retains upstream plugin GUIDs, assembly names, prefab
 names, and saved-world keys. All clients and the server need the same fork version.
 
-Package 5.1.103 is a packaging/privacy correction. It keeps runtime version 5.1.102,
+5.1.104 caps audit previews at ten records and prints the total and a six-character
+case-insensitive audit ID at the beginning and end. The client prints only loaded
+instance counters; complete records stay in the server's audit file. Periodic
+diagnostics skip per-record formatting. All clients and the server need 5.1.104.
+Dedicated-server and gameplay validation for this release remain pending.
+
+Package 5.1.103 was a packaging/privacy correction. It kept runtime version 5.1.102,
 places assemblies and Assets under an explicit plugins directory for Gale/r2modman,
 and uses virtual compiler source paths without debug symbols. The staged unsigned
 ServerSync dependency has only its CodeView PDB filename sanitized. No changes to
@@ -109,7 +115,8 @@ vehicle portals repair <audit-id> --remove <ZDO-id>,<ZDO-id> --confirm
 ```
 
 Audits list record IDs, instance IDs/positions, ship IDs, and registry anomalies.
-The console returns a bounded preview; complete server reports are saved under
+The console returns at most ten records, with the total and six-character audit ID
+at both ends. IDs accept either letter case. Complete server reports are saved under
 `BepInEx/config/PortalAudits/`. Audits belong to the requesting server admin and
 expire after five minutes or a world change. Repair without `--remove` corrects
 registrations and removes extra live instances sharing one record. It does not

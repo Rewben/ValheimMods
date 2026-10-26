@@ -21,9 +21,9 @@ public static class PortalCommands
     internal DateTime Expires;
     internal Dictionary<ZDOID, ZDO> Records = new();
   }
-  private static readonly Dictionary<string, Audit> audits = new();
+  private static readonly Dictionary<string, Audit> audits = new(StringComparer.OrdinalIgnoreCase);
   public static void Reset() => audits.Clear();
-  public static void LogCounters() => Print("Rewben portal counters " + Describe(null, out _).Split('\n')[0]);
+  public static void LogCounters() => Print("Rewben portal counters " + Describe(null, out _, false).Summary);
 
   private static void Print(string message)
   {
@@ -73,11 +73,18 @@ public static class PortalCommands
       return;
     }
     if (!ForkAccess.IsAdmin()) { Print("Admin access required."); return; }
-    if (args.Length > 0 && args[0] == "audit") Print("CLIENT " + Describe(null, out _));
+    if (args.Length > 0 && args[0] == "audit")
+    {
+      // The full client dump can contain tens of thousands of lines. Only inspect
+      // loaded views here; the server creates the authoritative, complete report.
+      var views = Resources.FindObjectsOfTypeAll<TeleportWorld>().Select(p => p.m_nview)
+        .Where(v => v != null && v.IsValid() && PortalRegistry.IsShipPortal(v.GetZDO())).ToList();
+      Print($"CLIENT ship portal instances={views.Count} uniqueRecords={views.Select(v => v.GetZDO().m_uid).Distinct().Count()}. Requesting server audit...");
+    }
     ZRoutedRpc.instance.InvokeRoutedRPC(ZNet.instance.GetServerPeer().m_uid, Request, string.Join(" ", args));
   }
 
-  private static string Describe(int? ship, out Dictionary<ZDOID, ZDO> records)
+  private static PortalAuditReport Describe(int? ship, out Dictionary<ZDOID, ZDO> records, bool includeRecords = true)
   {
     records = ZDOMan.instance.m_objectsByID.Values.Where(z => PortalRegistry.IsShipPortal(z) &&
       (!ship.HasValue || z.GetInt(VehicleZdoVars.MBParentId) == ship.Value)).ToDictionary(z => z.m_uid);
@@ -92,7 +99,7 @@ public static class PortalCommands
     var ordinaryEntries = ZDOMan.instance.m_objectsBySector.Where(l => l != null).SelectMany(l => l)
       .Where(z => z != null && selected.ContainsKey(z.m_uid)).GroupBy(z => z).ToDictionary(g => g.Key, g => g.Count());
     var lines = new List<string>();
-    foreach (var record in records.Values)
+    if (includeRecords) foreach (var record in records.Values)
     {
       registered.TryGetValue(record, out var membership);
       ordinaryEntries.TryGetValue(record, out var ordinary);
@@ -104,7 +111,8 @@ public static class PortalCommands
     var invalid = ZDOMan.instance.m_portalObjects.Values.Sum(l => l.Count(z => !PortalRegistry.IsPortal(z) || !ReferenceEquals(ZDOMan.instance.GetZDO(z.m_uid), z)));
     var tracked = Controllers.VehiclePiecesController.ActiveInstances.Values.Where(c => c != null).Sum(c => c.m_portals.Count);
     var instanceCount = live.Where(p => selected.ContainsKey(p.Key.m_uid)).Sum(p => p.Value.Count);
-    return $"portals={records.Count} instances={instanceCount} registry={records.Values.Sum(z => registered.TryGetValue(z, out var count) ? count : 0)} ordinary={ordinaryEntries.Values.Sum()} invalidRegistry={invalid} tracked={tracked} preventedCreates={PortalRegistry.PreventedCreations}\n" + string.Join("\n", lines);
+    var summary = $"portals={records.Count} instances={instanceCount} registry={records.Values.Sum(z => registered.TryGetValue(z, out var count) ? count : 0)} ordinary={ordinaryEntries.Values.Sum()} invalidRegistry={invalid} tracked={tracked} preventedCreates={PortalRegistry.PreventedCreations}";
+    return new PortalAuditReport(summary, lines);
   }
 
   private static string Execute(string[] args, long owner)
@@ -115,12 +123,13 @@ public static class PortalCommands
     {
       int? ship = args.Length > 1 ? int.Parse(args[1]) : null;
       var report = Describe(ship, out var records);
-      var token = Guid.NewGuid().ToString("N");
+      var directory = Path.Combine(Paths.ConfigPath, "PortalAudits");
+      Directory.CreateDirectory(directory);
+      // Do not overwrite earlier reports, including after reconnects/world changes.
+      var token = PortalAuditReport.NewId(id => audits.ContainsKey(id) || File.Exists(Path.Combine(directory, id + ".txt")));
+      File.WriteAllText(Path.Combine(directory, token + ".txt"), report.FullText);
       audits[token] = new Audit { Owner = owner, Expires = DateTime.UtcNow.AddMinutes(5), Records = records };
-      Directory.CreateDirectory(Path.Combine(Paths.ConfigPath, "PortalAudits"));
-      File.WriteAllText(Path.Combine(Paths.ConfigPath, "PortalAudits", token + ".txt"), report);
-      var preview = string.Join("\n", report.Split('\n').Take(65));
-      return $"SERVER audit={token} expires in 5 minutes. Overlap is not proof of duplication. Full report: PortalAudits/{token}.txt\n{preview}";
+      return report.Preview(token);
     }
     if (args[0] != "repair" || args.Length < 2 || !audits.TryGetValue(args[1], out var audit) || audit.Owner != owner)
       throw new InvalidOperationException("A fresh audit belonging to this admin is required.");

@@ -3,10 +3,10 @@
 ValheimRAFT with native ship-portal synchronization fixes and integrated
 RaftRebalance behavior. Based on upstream ValheimRAFT 5.1.1.
 
-**Thunderstore package 5.1.103 contains runtime fork 5.1.102.** This release fixes
-mod-manager asset placement and removes machine-specific build/debug paths.
-Gameplay behavior and network compatibility remain at runtime 5.1.102. It works
-with a server already running the Rewben 5.1.102 runtime.
+**Thunderstore package and runtime fork: 5.1.104.** This release limits portal
+audits to ten preview records, puts the total and a six-character audit ID on a
+clear summary line, and keeps complete reports on the server. Update both the
+server and every client to 5.1.104 before connecting.
 
 ## Installation
 
@@ -47,16 +47,26 @@ vehicle portals repair <audit-id>
 vehicle portals repair <audit-id> --remove <record-id>,<record-id> --confirm
 ```
 
-An audit reports saved records, live instances, positions, ship IDs and registry
-anomalies. Audits expire after five minutes. Repair without explicit removal IDs
+An audit prints its total and at most ten saved portal records. The final line
+repeats `AUDIT ID: A1B2C3` with the total portal count. IDs are six characters,
+accept uppercase or lowercase, and expire after five minutes. They belong to the
+requesting admin's current connection; reconnecting requires a new audit. Complete
+reports are saved on the server under `BepInEx/config/PortalAudits/<id>.txt`.
+The client prints only a small loaded-instance counter, not another full report.
+Periodic diagnostics also print counters without formatting all record details.
+
+Reports include saved records, live instances, positions, ship IDs and registry
+anomalies. Repair without explicit removal IDs
 does not delete distinct saved portal records. Position overlap alone is never
 treated as permission to delete a portal. Repairs provide no resource refunds.
 
 ## Status and source
 
-Runtime 5.1.102 completed dedicated-server startup and configuration migration.
-Headless regression checks pass. Multiplayer gameplay/stability acceptance is
-still pending; this is not a claim that every reported crash is resolved.
+Runtime 5.1.102 previously completed dedicated-server startup and configuration
+migration. Runtime 5.1.104 passes headless regression checks, including the
+16,248-record audit case. Dedicated-server startup and multiplayer stability
+validation for 5.1.104 remain pending. This update does not automatically remove
+existing distinct saved portal records or establish the cause of a disconnect.
 
 Source, maintenance, full snapshot rollback and upstream update instructions:
 [Rewben/ValheimMods](https://github.com/Rewben/ValheimMods/tree/rewben/main).

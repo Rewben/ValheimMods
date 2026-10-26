@@ -39,7 +39,7 @@ try {
   foreach ($file in Get-ChildItem -LiteralPath $stage -Recurse -File) {
     $files[[IO.Path]::GetRelativePath($stage,$file.FullName).Replace('\','/')] = (Get-FileHash -LiteralPath $file.FullName).Hash.ToLowerInvariant()
   }
-  @{ version=$runtimeVersion; runtimeVersion=$runtimeVersion; packageVersion=$packageVersion; upstream=('ValheimRAFT-v' + $props.Project.PropertyGroup.ForkUpstreamVersion); forkRevision=[int]$props.Project.PropertyGroup.ForkRevision; gameVersion=[string]$props.Project.PropertyGroup.ForkExpectedGameVersion; commit=$commit; validation='Runtime 5.1.102 server startup verified; multiplayer gameplay acceptance pending'; files=$files } | ConvertTo-Json -Depth 6 | Set-Content "$stage/release-metadata.json" -Encoding utf8NoBOM
+  @{ version=$runtimeVersion; runtimeVersion=$runtimeVersion; packageVersion=$packageVersion; upstream=('ValheimRAFT-v' + $props.Project.PropertyGroup.ForkUpstreamVersion); forkRevision=[int]$props.Project.PropertyGroup.ForkRevision; gameVersion=[string]$props.Project.PropertyGroup.ForkExpectedGameVersion; commit=$commit; validation="Headless regression, build and archive checks passed; runtime $runtimeVersion dedicated-server and gameplay validation pending"; files=$files } | ConvertTo-Json -Depth 6 | Set-Content "$stage/release-metadata.json" -Encoding utf8NoBOM
   $archive = Join-Path $destination "Rewben-ValheimRAFT-$packageVersion.zip"
   if (Test-Path -LiteralPath $archive) { throw "Package already exists: $archive. Preserve it or remove that exact candidate before rebuilding." }
   [IO.Compression.ZipFile]::CreateFromDirectory($stage, $archive)
