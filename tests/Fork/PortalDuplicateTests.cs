@@ -158,7 +158,7 @@ public sealed class PortalDuplicateTests
     var keep=Add(1,new(4));var dead=Add(2,new(4));
     Chainloader.PluginInfos.Add("org.bepinex.plugins.targetportal",new PluginInfo());
     TargetPortal.TargetPortal.knownPortals.UnionWith(new[] {keep,dead});TargetPortal.Map.Add(keep);TargetPortal.Map.Add(dead);
-    ZDOMan.instance.m_objectsByID.Remove(dead.m_uid);dead.Valid=false;
+    ZDOMan.instance.m_objectsByID.Remove(dead.m_uid);dead.Valid=false;dead.m_uid=ZDOID.None;
     PortalMapRefresh.AfterRepair();
     Assert.That(TargetPortal.TargetPortal.knownPortals,Is.EquivalentTo(new[] {keep}));
     Assert.That(TargetPortal.Map.Count,Is.Zero);Assert.That(TargetPortal.Map.Clears,Is.EqualTo(1));

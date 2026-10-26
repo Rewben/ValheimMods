@@ -1,5 +1,16 @@
 # Changelog
 
+## Package and runtime 5.1.106
+
+- Rebuild TargetPortal's cached portal set after explicit cleanup, including dead
+  pooled ZDOs whose network IDs and hash codes changed. Clear temporary map pins
+  after rebuilding so the deleted records cannot recreate them before the next
+  TargetPortal refresh.
+- Match the game record's mutable-ID equality/hash behavior in regression doubles
+  and verify stale pooled records are removed while the surviving portal remains.
+- Includes the confirmed position cleanup introduced in 5.1.105. Server and all
+  clients must use 5.1.106. No saved-record cleanup runs during installation.
+
 ## Package and runtime 5.1.105
 
 - Audit position-based saved-portal duplicates using ship, prefab, coordinate

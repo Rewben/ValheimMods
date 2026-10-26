@@ -3,10 +3,10 @@
 ValheimRAFT with native ship-portal synchronization fixes and integrated
 RaftRebalance behavior. Based on upstream ValheimRAFT 5.1.1.
 
-**Thunderstore package and runtime fork: 5.1.105.** Audits identify saved portal
+**Thunderstore package and runtime fork: 5.1.106.** Audits identify saved portal
 copies at the same ship-relative position and print a short confirmed-cleanup
 command. Cleanup runs only on explicit admin request, in small networked batches.
-Update both the server and every client to 5.1.105 before connecting.
+Update both the server and every client to 5.1.106 before connecting.
 
 ## Installation
 
@@ -77,10 +77,10 @@ after repair; close and reopen the portal map to refresh it.
 ## Status and source
 
 Runtime 5.1.102 previously completed dedicated-server startup and configuration
-migration. Runtime 5.1.104 completed dedicated-server startup. Runtime 5.1.105
+migration. Runtime 5.1.104 completed dedicated-server startup. Runtime 5.1.106
 passes headless regression checks, including a 16,248-record confirmed cleanup
 with asynchronous deletion acknowledgements. Dedicated-server startup and
-multiplayer validation of 5.1.105 remain pending. Tests use inspected game contracts
+multiplayer validation of 5.1.106 remain pending. Tests use inspected game contracts
 and do not simulate Unity networking or establish that all reported disconnects
 are resolved.
 

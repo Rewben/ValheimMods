@@ -1,9 +1,13 @@
-# Rewben ValheimRAFT: package and runtime 5.1.105
+# Rewben ValheimRAFT: package and runtime 5.1.106
 
 Maintained at https://github.com/Rewben/ValheimMods on `rewben/main`, based on
 `ValheimRAFT-v5.1.1`. This fork integrates portal synchronization corrections and
 RaftRebalance behavior. It retains upstream plugin GUIDs, assembly names, prefab
 names, and saved-world keys. All clients and the server need the same fork version.
+
+5.1.106 rebuilds TargetPortal's cached set after confirmed cleanup, handling the
+mutable network IDs/hash codes of pooled ZDOs before clearing temporary pins.
+Matching 5.1.106 is required on clients and server; startup does not delete portals.
 
 5.1.105 adds manual position-based saved-record cleanup. Audit matches ship,
 prefab, coordinate frame and local 3D position within 1 mm, records the selected

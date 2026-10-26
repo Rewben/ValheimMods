@@ -26,9 +26,11 @@ public static class ZoneSystem
   public readonly record struct SectorIndex(int Sector);
   public static SectorIndex GetSectorIndex(UnityEngine.Vector3 p) => new((int)Math.Floor(p.x/64));
 }
-public sealed class ZDO
+public sealed class ZDO : IEquatable<ZDO>
 {
   public ZDOID m_uid;
+  public override int GetHashCode() => m_uid.GetHashCode();
+  public bool Equals(ZDO? other) => other != null && m_uid == other.m_uid;
   public bool Valid = true, SaveClone;
   public string Tag = "Test portal";
   public int TagReads;

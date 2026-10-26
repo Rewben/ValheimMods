@@ -19,8 +19,13 @@ public static class PortalMapRefresh
       var assembly = plugin.Instance.GetType().Assembly;
       var known = assembly.GetType("TargetPortal.TargetPortal")?.GetField("knownPortals", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as ICollection<ZDO>;
       if (known != null)
-        foreach (var record in known.Where(z => !PortalRegistry.IsPortal(z) || !ReferenceEquals(ZDOMan.instance.GetZDO(z.m_uid), z)).ToList())
-          known.Remove(record);
+      {
+        // ZDO.GetHashCode uses its mutable network ID. Reset/pooling changes that
+        // ID, so Remove can no longer find a dead entry in the old hash bucket.
+        var valid = known.Where(z => PortalRegistry.IsPortal(z) && ReferenceEquals(ZDOMan.instance.GetZDO(z.m_uid), z)).ToList();
+        known.Clear();
+        foreach (var record in valid) known.Add(record);
+      }
       var map = assembly.GetType("TargetPortal.Map");
       var pins = map?.GetField("activePins", BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null) as IDictionary;
       if (pins != null && pins.Count > 0)
